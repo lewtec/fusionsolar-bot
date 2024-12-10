@@ -45,7 +45,7 @@ runs:
         docker run -i \
           --dns=1.1.1.1 \
           --net=host \
-          -e SELENIUM_PROXY_SERVER=localhost:9050
+          -e SELENIUM_PROXY_SERVER=localhost:9050 \
           -e FUSIONSOLAR_USER="${{ inputs.user }}" \
           -e FUSIONSOLAR_PASSWORD="${{ inputs.password }}" \
           -e SMTP_USER="${{ inputs.smtp_user }}" \
