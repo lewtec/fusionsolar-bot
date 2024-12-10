@@ -20,7 +20,9 @@
       in pkgs.writeShellScriptBin "docker-deploy" ''
         ${container} | docker load
         docker tag ${container.name}:${container.tag} ${container.name}:latest
+        docker tag ${container.name}:${container.tag} ${container.name}:$(cat version.txt)
         docker push ${container.name}:${container.tag}
+        docker push ${container.name}:$(cat version.txt)
         docker push ${container.name}:latest
       '';
     };
