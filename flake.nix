@@ -19,7 +19,9 @@
         inherit (self.packages.${system}) container;
       in pkgs.writeShellScriptBin "docker-deploy" ''
         ${container} | docker load
+        docker tag ${container.name}:${container.tag} ${container.name}:latest
         docker push ${container.name}:${container.tag}
+        docker push ${container.name}:latest
       '';
     };
     nixosModules.default = import ./nixos.nix;
