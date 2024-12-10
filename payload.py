@@ -31,6 +31,7 @@ parser.add_argument('--smtp-user', default=os.getenv("SMTP_USER"))
 parser.add_argument('--smtp-passwd', default=os.getenv("SMTP_PASSWD"))
 parser.add_argument('--smtp-server', default=os.getenv("SMTP_SERVER"))
 parser.add_argument('--smtp-destinations', default=os.getenv("SMTP_DESTINATIONS"))
+parser.add_argument('--proxy', default=os.environ.get("SELENIUM_PROXY_SERVER"))
 parser.add_argument('--headless', action='store_true')
 parser.add_argument('--verbose', '-v', action='store_true')
 args = parser.parse_args()
@@ -62,6 +63,8 @@ with tempfile.TemporaryDirectory() as tmpdir:
         log_output=subprocess.STDOUT
     )
     chrome_options = webdriver.ChromeOptions()
+    if args.proxy is not None:
+        chrome_options.add_argument(f'--proxy-server={args.proxy}')
     if args.headless:
         chrome_options.headless = True
         chrome_options.add_argument('--headless')

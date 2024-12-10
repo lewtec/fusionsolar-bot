@@ -21,6 +21,10 @@ inputs:
 runs:
   using: composite
   steps:
+    - name: Setup tor for proxying
+      uses: tor-actions/setup-tor@main
+      with:
+        daemon: true
     - name: Get container tag
       shell: bash
       run: |
@@ -37,8 +41,11 @@ runs:
     - name: Run fusionsolar workflow in one go
       shell: bash
       run: |
+        
         docker run -i \
           --dns=1.1.1.1 \
+          --net=host \
+          -e SELENIUM_PROXY_SERVER=localhost:9050
           -e FUSIONSOLAR_USER="${{ inputs.user }}" \
           -e FUSIONSOLAR_PASSWORD="${{ inputs.password }}" \
           -e SMTP_USER="${{ inputs.smtp_user }}" \
