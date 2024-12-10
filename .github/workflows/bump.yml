@@ -22,8 +22,6 @@ jobs:
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - name: Setup kitchen
-        uses: lucasew/action-i-only-care-about-nix@main
       - name: Get ingredients
         uses: actions/checkout@v2
       - name: Install the stove
@@ -37,6 +35,8 @@ jobs:
       - uses: DeterminateSystems/magic-nix-cache-action@main
       - name: Bump
         run: nix flake update
+      - name: "nix flake check"
+        run: nix flake check
       - uses: actions/upload-artifact@v4
         with:
           name: build-logs
