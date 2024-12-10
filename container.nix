@@ -5,9 +5,13 @@
 , fontconfig
 }:
 
-dockerTools.streamLayeredImage {
+let
   name = "ghcr.io/lucasew/fusionsolar-bot";
   tag = "${builtins.readFile ./version.txt}-${self.shortRev or self.dirtyShortRev}";
+in
+
+dockerTools.streamLayeredImage {
+  inherit name tag;
   maxLayers = 2;
 
   contents = [
@@ -42,5 +46,9 @@ dockerTools.streamLayeredImage {
       "FONTCONFIG_FILE=${fontconfig.out}/etc/fonts/fonts.conf"
       "FONTCONFIG_PATH=${fontconfig.out}/etc/fonts/"
     ];
+  };
+
+  passthru = {
+    inherit name tag;
   };
 }
