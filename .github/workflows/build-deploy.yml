@@ -25,10 +25,7 @@ jobs:
           registry: ${{ env.REGISTRY }}
           username: ${{ env.USERNAME }}
           password: ${{ github.token }}
-      - name: "Build e publicação do container"
-        env:
-          TAG: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+      - name: Build e publicação
         if: github.ref_type == 'tag'
         run: |
-          nix build .#container && ./result | docker load
-          docker push $( docker image ls -f reference=fusionsolar-bot --format '{{.ID}}' )
+          nix run .#docker-deploy

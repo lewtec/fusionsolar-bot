@@ -6,7 +6,7 @@
 }:
 
 dockerTools.streamLayeredImage {
-  name = "fusionsolar-bot";
+  name = "ghcr.io/lucasew/fusionsolar-bot";
   tag = "${builtins.readFile ./version.txt}-${self.shortRev or self.dirtyShortRev}";
   maxLayers = 2;
 
