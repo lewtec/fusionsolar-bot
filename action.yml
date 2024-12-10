@@ -28,20 +28,20 @@ runs:
     - name: Hide secrets
       shell: bash
       run: |
-        echo "::add-mask::$INPUT_USER"
-        echo "::add-mask::$INPUT_PASSWORD"
-        echo "::add-mask::$INPUT_SMTP_USER"
-        echo "::add-mask::$INPUT_SMTP_PASSWD"
-        echo "::add-mask::$INPUT_SMTP_SERVER"
-        echo "::add-mask::$INPUT_SMTP_DESTINATIONS"
+        echo "::add-mask::${{ inputs.user }}"
+        echo "::add-mask::${{ inputs.password }}"
+        echo "::add-mask::${{ inputs.smtp_user }}"
+        echo "::add-mask::${{ inputs.smtp_passwd }}"
+        echo "::add-mask::${{ inputs.smtp_server }}"
+        echo "::add-mask::${{ inputs.smtp_destinations }}"
     - name: Run fusionsolar workflow in one go
       shell: bash
       run: |
         docker run -i \
-          -e FUSIONSOLAR_USER="$INPUT_USER" \
-          -e FUSIONSOLAR_PASSWORD="$INPUT_PASSWORD" \
-          -e SMTP_USER="$INPUT_SMTP_USER" \
-          -e SMTP_PASSWD="$INPUT_SMTP_PASSWD" \
-          -e SMTP_SERVER="$INPUT_SMTP_SERVER" \
-          -e SMTP_DESTINATIONS="$INPUT_SMTP_DESTINATIONS" \
+          -e FUSIONSOLAR_USER="${{ inputs.user }}" \
+          -e FUSIONSOLAR_PASSWORD="${{ inputs.password }}" \
+          -e SMTP_USER="${{ inputs.smtp_user }}" \
+          -e SMTP_PASSWD="${{ inputs.smtp_passwd }}" \
+          -e SMTP_SERVER="${{ inputs.smtp_server }}" \
+          -e SMTP_DESTINATIONS="${{ inputs.smtp_destinations }}" \
           ghcr.io/lucasew/fusionsolar-bot:$CONTAINER_REF
