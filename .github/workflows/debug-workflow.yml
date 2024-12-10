@@ -1,0 +1,36 @@
+name: Debug workflow
+on:
+  workflow_dispatch:
+    inputs:
+      user:
+        description: Login user for fusionsolar
+        required: true
+      password:
+        description: Password for the fusionsolar user
+        required: true
+      smtp_user:
+        description: User for SMTP server to send the email
+      smtp_passwd:
+        description: Password for SMTP server to send the email
+      smtp_server:
+        description: SMTP server to send email
+      smtp_destinations:
+        description: List of emails to send the results separated by space
+jobs:
+  test:
+    name: Test if the workflow works
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout this action
+        uses: actions/checkout@v4
+        with:
+          path: ./.github/actions/this
+      - name: Run this action
+        uses: ./.github/actions/this
+        with:
+          user: ${{ github.event.inputs.user }}
+          password: ${{ github.event.inputs.password }}
+          smtp_user: ${{ github.event.inputs.smtp_user }}
+          smtp_passwd: ${{ github.event.inputs.smtp_passwd }}
+          smtp_server: ${{ github.event.inputs.smtp_server }}
+          smtp_destinations: ${{ github.event.inputs.smtp_destinations }}

@@ -1,0 +1,47 @@
+name: Fusionsolar report
+description: Fetches info about solar stations from fusionsolar and send them as a e-mail
+branding:
+  icon: sun
+  color: yellow
+inputs:
+  user:
+    description: Login user for fusionsolar
+    required: true
+  password:
+    description: Password for the fusionsolar user
+    required: true
+  smtp_user:
+    description: User for SMTP server to send the email
+  smtp_passwd:
+    description: Password for SMTP server to send the email
+  smtp_server:
+    description: SMTP server to send email
+  smtp_destinations:
+    description: List of emails to send the results separated by space
+runs:
+  using: composite
+  steps:
+    - name: Get container tag
+      shell: bash
+      run: |
+        echo CONTAINER_REF="$(cat "${{ github.action_path }}/version.txt")" >> $GITHUB_ENV
+    - name: Hide secrets
+      shell: bash
+      run: |
+        echo "::add-mask::$INPUT_USER"
+        echo "::add-mask::$INPUT_PASSWORD"
+        echo "::add-mask::$INPUT_SMTP_USER"
+        echo "::add-mask::$INPUT_SMTP_PASSWD"
+        echo "::add-mask::$INPUT_SMTP_SERVER"
+        echo "::add-mask::$INPUT_SMTP_DESTINATIONS"
+    - name: Run fusionsolar workflow in one go
+      shell: bash
+      run: |
+        docker run -ti \
+          -e FUSIONSOLAR_USER="$INPUT_USER" \
+          -e FUSIONSOLAR_PASSWORD="$INPUT_PASSWORD" \
+          -e SMTP_USER="$INPUT_SMTP_USER" \
+          -e SMTP_PASSWD="$INPUT_SMTP_PASSWD" \
+          -e SMTP_SERVER="$INPUT_SMTP_SERVER" \
+          -e SMTP_DESTINATIONS="$INPUT_SMTP_DESTINATIONS" \
+          ghcr.io/lucasew/fusionsolar-bot:$CONTAINER_REF
