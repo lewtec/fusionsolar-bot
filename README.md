@@ -38,6 +38,13 @@ Nenhum estado desse container precisa ser salvo.
 ### Conda/pip
 Você vai precisar do `chromium/chrome`, `chromedriver` e do `selenium`. O sistema de envio de e-mail já tá no Python.
 
+### GitHub Actions
+Considerado experimental.
+
+Por algum motivo o sistema não consegue acessar o fusionsolar pelo GitHub Actions. Cheguei a tentar pelo Tor sem muito sucesso.
+
+O workflow, na fase de configurar o sistema que oculta os secrets, acaba mostrando os secrets :facepalm:
+
 ## Parâmetros
 Esse projeto faz basicamente duas coisas:
 - Pega os dados de produção de todas as estações em uma conta fusionsolar
