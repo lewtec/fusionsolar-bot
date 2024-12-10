@@ -31,5 +31,4 @@ jobs:
         if: github.ref_type == 'tag'
         run: |
           nix build .#container && ./result | docker load
-          docker tag $( docker image ls -f reference=fusionsolar-bot --format '{{.ID}}' ) ${{ env.TAG }}:$( docker image ls -f reference=fusionsolar-bot --format '{{.Tag}}' )
-          docker push ${{ env.TAG }}:$( docker image ls -f reference=fusionsolar-bot --format '{{.Tag}}' )
+          docker push $( docker image ls -f reference=fusionsolar-bot --format '{{.ID}}' )
