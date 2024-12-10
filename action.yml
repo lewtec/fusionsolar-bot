@@ -37,7 +37,7 @@ runs:
     - name: Run fusionsolar workflow in one go
       shell: bash
       run: |
-        docker run -ti \
+        docker run -i \
           -e FUSIONSOLAR_USER="$INPUT_USER" \
           -e FUSIONSOLAR_PASSWORD="$INPUT_PASSWORD" \
           -e SMTP_USER="$INPUT_SMTP_USER" \
