@@ -38,6 +38,7 @@ runs:
       shell: bash
       run: |
         docker run -i \
+          --dns=1.1.1.1 \
           -e FUSIONSOLAR_USER="${{ inputs.user }}" \
           -e FUSIONSOLAR_PASSWORD="${{ inputs.password }}" \
           -e SMTP_USER="${{ inputs.smtp_user }}" \
