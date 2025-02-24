@@ -1,6 +1,7 @@
 [project]
 name = "fusionsolar-bot"
 dynamic = ["version"]
+readme = "README.md"
 
 dependencies = [
   "selenium",
