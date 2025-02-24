@@ -12,3 +12,4 @@ printf "%s" "$VERSION" > version.txt
 git add -A
 git commit -sm "bump to $VERSION"
 git tag "$VERSION"
+git push --tags
