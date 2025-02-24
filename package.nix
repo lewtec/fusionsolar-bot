@@ -1,15 +1,25 @@
 { chromedriver
 , chromium
-, lib
-, python3
-, writeShellScriptBin
+, selenium
+, sentry-sdk
+, hatchling
+, buildPythonPackage
 }:
 
-let
-  python = python3.withPackages (p: [p.selenium]);
-in
+buildPythonPackage {
+  pname = "fusionsolar-bot";
+  version = builtins.readFile ./version.txt;
+  pyproject = true;
 
-writeShellScriptBin "fusionsolar-bot" ''
-  export PATH=$PATH:${lib.makeBinPath [chromedriver chromium]}
-  exec ${python.interpreter} ${./payload.py} "$@"
-''
+  src = ./.;
+
+  makeWrapperArgs = [
+    "--prefix" "PATH" ":" "${chromedriver}/bin"
+    "--prefix" "PATH" ":" "${chromium}/bin"
+  ];
+
+  build-system = [ hatchling ];
+
+  dependencies = [ selenium sentry-sdk ];
+}
+
