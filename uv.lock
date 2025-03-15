@@ -1,13 +1,14 @@
 version = 1
+revision = 1
 requires-python = ">=3.12"
 
 [[package]]
 name = "attrs"
-version = "25.1.0"
+version = "25.3.0"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/49/7c/fdf464bcc51d23881d110abd74b512a42b3d5d376a55a831b44c603ae17f/attrs-25.1.0.tar.gz", hash = "sha256:1c97078a80c814273a76b2a298a932eb681c87415c11dee0a6921de7f1b02c3e", size = 810562 }
+sdist = { url = "https://files.pythonhosted.org/packages/5a/b0/1367933a8532ee6ff8d63537de4f1177af4bff9f3e829baf7331f595bb24/attrs-25.3.0.tar.gz", hash = "sha256:75d7cefc7fb576747b2c81b4442d4d4a1ce0900973527c011d1030fd3bf4af1b", size = 812032 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/fc/30/d4986a882011f9df997a55e6becd864812ccfcd821d64aac8570ee39f719/attrs-25.1.0-py3-none-any.whl", hash = "sha256:c75a69e28a550a7e93789579c22aa26b0f5b83b75dc4e08fe092980051e1090a", size = 63152 },
+    { url = "https://files.pythonhosted.org/packages/77/06/bb80f5f86020c4551da315d78b3ab75e8228f89f0162f2c3a819e407941a/attrs-25.3.0-py3-none-any.whl", hash = "sha256:427318ce031701fea540783410126f03899a97ffc6f61596ad581ac2e40e3bc3", size = 63815 },
 ]
 
 [[package]]
@@ -36,7 +37,6 @@ wheels = [
 
 [[package]]
 name = "fusionsolar-bot"
-version = "0.2.10"
 source = { editable = "." }
 dependencies = [
     { name = "selenium" },
@@ -164,16 +164,16 @@ wheels = [
 
 [[package]]
 name = "trio-websocket"
-version = "0.12.1"
+version = "0.12.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "outcome" },
     { name = "trio" },
     { name = "wsproto" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/8d/ba/ab932f5f520565caf948ccadade04f82daa33272b9629b7bc71fd1bb1a63/trio_websocket-0.12.1.tar.gz", hash = "sha256:d55ccd4d3eae27c494f3fdae14823317839bdcb8214d1173eacc4d42c69fc91b", size = 33547 }
+sdist = { url = "https://files.pythonhosted.org/packages/d1/3c/8b4358e81f2f2cfe71b66a267f023a91db20a817b9425dd964873796980a/trio_websocket-0.12.2.tar.gz", hash = "sha256:22c72c436f3d1e264d0910a3951934798dcc5b00ae56fc4ee079d46c7cf20fae", size = 33549 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/d3/b9/b07ec357ba125ad26e1c07781b9d7f0414af85ad76e0d73617ddb5ce041c/trio_websocket-0.12.1-py3-none-any.whl", hash = "sha256:608ec746bb287e5d5a66baf483e41194193c5cf05ffaad6240e7d1fcd80d1e6f", size = 21216 },
+    { url = "https://files.pythonhosted.org/packages/c7/19/eb640a397bba49ba49ef9dbe2e7e5c04202ba045b6ce2ec36e9cadc51e04/trio_websocket-0.12.2-py3-none-any.whl", hash = "sha256:df605665f1db533f4a386c94525870851096a223adcb97f72a07e8b4beba45b6", size = 21221 },
 ]
 
 [[package]]
