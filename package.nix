@@ -21,5 +21,7 @@ buildPythonPackage {
   build-system = [ hatchling ];
 
   dependencies = [ selenium sentry-sdk ];
+
+  meta.mainProgram = "fusionsolar-bot";
 }
 
