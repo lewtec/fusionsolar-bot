@@ -6,24 +6,24 @@
     flake-utils.url = "github:numtide/flake-utils";
   };
 
-  outputs = { nixpkgs, flake-utils, self, ... }: 
+  outputs = { nixpkgs, flake-utils, self, ... }:
   flake-utils.lib.eachDefaultSystem (system: let
     pkgs = import nixpkgs { inherit system; };
   in {
     packages = {
       default = pkgs.python3Packages.callPackage ./package.nix {};
-      container = pkgs.python3Packages.callPackage ./container.nix {
-        inherit self;
-      };
+      container = pkgs.python3Packages.callPackage ./container.nix { inherit self; };
       docker-deploy = let
         inherit (self.packages.${system}) container;
+        version = "$(cat version.txt)";
       in pkgs.writeShellScriptBin "docker-deploy" ''
         ${container} | docker load
-        docker tag ${container.name}:${container.tag} ${container.name}:latest
-        docker tag ${container.name}:${container.tag} ${container.name}:$(cat version.txt)
-        docker push ${container.name}:${container.tag}
-        docker push ${container.name}:$(cat version.txt)
-        docker push ${container.name}:latest
+
+        # Tag with different versions
+        for tag in ${container.tag} ${version} latest; do
+          docker tag ${container.name}:${container.tag} ${container.name}:$tag
+          docker push ${container.name}:$tag
+        done
       '';
     };
     nixosModules.default = import ./nixos.nix;

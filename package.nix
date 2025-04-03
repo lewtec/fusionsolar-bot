@@ -4,6 +4,8 @@
 , sentry-sdk
 , hatchling
 , buildPythonPackage
+, lib
+, python3
 }:
 
 buildPythonPackage {
@@ -13,15 +15,22 @@ buildPythonPackage {
 
   src = ./.;
 
-  makeWrapperArgs = [
-    "--prefix" "PATH" ":" "${chromedriver}/bin"
-    "--prefix" "PATH" ":" "${chromium}/bin"
-  ];
-
   build-system = [ hatchling ];
-
   dependencies = [ selenium sentry-sdk ];
 
-  meta.mainProgram = "fusionsolar-bot";
-}
+  makeWrapperArgs = [
+    "--prefix" "PATH" ":" "${lib.makeBinPath [ chromedriver chromium ]}"
+  ];
 
+  # Add proper checkInputs if there are tests
+  checkInputs = [ python3.pkgs.pytest ];
+  pythonImportsCheck = [ "fusionsolar_bot" ];
+
+  meta = {
+    description = "A bot for interacting with FusionSolar";
+    homepage = "https://github.com/username/fusionsolar-bot";
+    license = lib.licenses.mit;
+    mainProgram = "fusionsolar-bot";
+    maintainers = with lib.maintainers; [ lucasew ];
+  };
+}

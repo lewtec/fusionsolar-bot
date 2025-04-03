@@ -8,6 +8,12 @@
 let
   name = "ghcr.io/lucasew/fusionsolar-bot";
   tag = "${builtins.readFile ./version.txt}-${self.shortRev or self.dirtyShortRev}";
+
+  user = {
+    name = "user";
+    uid = 1000;
+    gid = 1000;
+  };
 in
 
 dockerTools.streamLayeredImage {
@@ -17,8 +23,8 @@ dockerTools.streamLayeredImage {
   contents = [
     dockerTools.binSh
     (dockerTools.fakeNss.override {
-      extraPasswdLines = ["user:x:1000:1000:new user:/tmp:/bin/sh"];
-      extraGroupLines = ["user:x:1000:"];
+      extraPasswdLines = ["${user.name}:x:${toString user.uid}:${toString user.gid}:new user:/tmp:/bin/sh"];
+      extraGroupLines = ["${user.name}:x:${toString user.gid}:"];
     })
   ];
 
@@ -26,22 +32,21 @@ dockerTools.streamLayeredImage {
     mkdir -m777 -p tmp etc dev/shm
   '';
 
-  uid = 1000;
-  gid = 1000;
-  uname = "user";
-  gname = "user";
+  inherit (user) uid gid;
+  uname = user.name;
+  gname = user.name;
 
   config = {
     Entrypoint = [
       (lib.getExe (python3Packages.callPackage ./package.nix {}))
       "--headless"
     ];
-    User = "user";
+    User = user.name;
     Env = [
       "HOME=/tmp"
       "LANGUAGE=en_US"
-      "UID=1000"
-      "GID=1000"
+      "UID=${toString user.uid}"
+      "GID=${toString user.gid}"
       "TZ=UTC"
       "FONTCONFIG_FILE=${fontconfig.out}/etc/fonts/fonts.conf"
       "FONTCONFIG_PATH=${fontconfig.out}/etc/fonts/"
