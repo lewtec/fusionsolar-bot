@@ -5,7 +5,7 @@
 , hatchling
 , buildPythonPackage
 , lib
-, python3
+, python
 }:
 
 buildPythonPackage {
@@ -23,7 +23,7 @@ buildPythonPackage {
   ];
 
   # Add proper checkInputs if there are tests
-  checkInputs = [ python3.pkgs.pytest ];
+  checkInputs = [ python.pkgs.pytest ];
   pythonImportsCheck = [ "fusionsolar_bot" ];
 
   meta = {
