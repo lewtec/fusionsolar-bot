@@ -84,22 +84,10 @@ def login_to_fusionsolar(driver, username, password):
             button.click()
 
         # Handle privacy modal
-        modal_elements = driver.find_elements(By.CSS_SELECTOR, "div.dpdesign-modal.nco-privacy-confirm-modal")
-        if modal_elements:
-            modal = modal_elements[0]
-            print('[*] Tratando modal de privacidade', file=stderr)
-
-            checkbox = modal.find_element(By.CSS_SELECTOR, "input")
-            if checkbox.is_selected():
-                checkbox.click()
-
-            approve_button = None
-            for button in modal.find_elements(By.CSS_SELECTOR, "button"):
-                if button.text == 'Approve':
-                    approve_button = button
-                    approve_button.click()
-                    break
-
+        for modal in driver.find_elements(By.CSS_SELECTOR, "div.nco-privacy-confirm-modal"):
+            if modal.find_element(By.CSS_SELECTOR, 'div.nco-privacy-content') is None:
+                continue
+            approve_button = modal.find_element(By.CSS_SELECTOR, 'button.dpdesign-btn-primary')
             if approve_button:
                 time.sleep(1)
                 approve_button.click()
