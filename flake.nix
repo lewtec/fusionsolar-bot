@@ -10,9 +10,9 @@
   flake-utils.lib.eachDefaultSystem (system: let
     pkgs = import nixpkgs { inherit system; };
   in {
-    packages = {
+    packages = rec {
       default = pkgs.python3Packages.callPackage ./package.nix {};
-      container = pkgs.python3Packages.callPackage ./container.nix { inherit self; };
+      container = pkgs.python3Packages.callPackage ./container.nix { inherit self default; };
       docker-deploy = let
         inherit (self.packages.${system}) container;
         version = "$(cat version.txt)";

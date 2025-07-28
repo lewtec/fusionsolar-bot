@@ -3,11 +3,12 @@
 , lib
 , self
 , fontconfig
+, default
 }:
 
 let
   name = "ghcr.io/lucasew/fusionsolar-bot";
-  tag = "${builtins.readFile ./version.txt}-${self.shortRev or self.dirtyShortRev}";
+  tag = default.version;
 
   user = {
     name = "user";
@@ -38,7 +39,7 @@ dockerTools.streamLayeredImage {
 
   config = {
     Entrypoint = [
-      (lib.getExe (python3Packages.callPackage ./package.nix {}))
+      (lib.getExe default)
       "--headless"
     ];
     User = user.name;
