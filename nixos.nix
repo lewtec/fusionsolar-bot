@@ -67,6 +67,12 @@ in
       podman.user = cfg.user;
     };
 
+    users.users.${cfg.user} = {
+      linger = true;
+      isSystemUser = true;
+      group = cfg.group;
+    };
+
     systemd.services.fusionsolar-reporter = {
       requires = [ "network-online.target" ];
       serviceConfig = {
