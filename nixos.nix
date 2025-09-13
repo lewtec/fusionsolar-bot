@@ -72,7 +72,6 @@ in
       serviceConfig = {
         EnvironmentFile = cfg.environmentFile;
         DynamicUser = true;
-        User = cfg.user;
         Group = cfg.group;
       };
     };
