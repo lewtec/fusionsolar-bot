@@ -179,6 +179,8 @@ def send_email(smtp_user, smtp_passwd, smtp_server, destinations, subject, body_
         message.attach(attachment)
 
     context = ssl.create_default_context()
+    context.check_hostname = False
+    context.verify_mode = ssl.CERT_NONE
 
     server_parts = smtp_server.split(":")
     server_name = server_parts[0]
