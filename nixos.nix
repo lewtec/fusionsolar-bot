@@ -25,16 +25,6 @@ in
       description = "Credentials file";
     };
 
-    user = mkOption {
-      type = types.str;
-      default = "fusionsolar";
-    };
-
-    group = mkOption {
-      type = types.str;
-      default = "fusionsolar";
-    };
-
     image = mkOption {
       description = "Which cf-torrent image to use";
       default = "ghcr.io/lucasew/fusionsolar-bot:latest";
@@ -64,22 +54,12 @@ in
       pull = "always";
       serviceName = "fusionsolar-reporter";
       autoStart = false;
-      podman.user = cfg.user;
     };
-
-    users.users.${cfg.user} = {
-      linger = true;
-      isSystemUser = true;
-      group = cfg.group;
-    };
-    users.groups.${cfg.group} = {};
 
     systemd.services.fusionsolar-reporter = {
       requires = [ "network-online.target" ];
       serviceConfig = {
         EnvironmentFile = cfg.environmentFile;
-        DynamicUser = true;
-        Group = cfg.group;
       };
     };
   };
