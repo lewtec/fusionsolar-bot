@@ -72,6 +72,7 @@ in
       isSystemUser = true;
       group = cfg.group;
     };
+    users.groups.${cfg.group} = {};
 
     systemd.services.fusionsolar-reporter = {
       requires = [ "network-online.target" ];
