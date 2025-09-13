@@ -52,10 +52,10 @@ in
 
     virtualisation.oci-containers.containers.fusionsolar-reporter = {
       inherit (cfg) image;
+      environmentFiles = [ cfg.environmentFile ];
       pull = "always";
       serviceName = "fusionsolar-reporter";
       autoStart = false;
-      environmentFiles = [ cfg.environmentFile ];
     };
 
     systemd.services.fusionsolar-reporter.serviceConfig.Restart = mkForce "no";
