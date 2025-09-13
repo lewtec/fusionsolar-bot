@@ -8,6 +8,7 @@ let
   inherit (lib)
     mkOption
     mkEnableOption
+    mkForce
     types
     mkIf
     ;
@@ -56,5 +57,7 @@ in
       autoStart = false;
       environmentFiles = [ cfg.environmentFile ];
     };
+
+    systemd.services.fusionsolar-reporter.serviceConfig.Restart = mkForce "no";
   };
 }
