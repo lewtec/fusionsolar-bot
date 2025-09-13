@@ -54,13 +54,7 @@ in
       pull = "always";
       serviceName = "fusionsolar-reporter";
       autoStart = false;
-    };
-
-    systemd.services.fusionsolar-reporter = {
-      requires = [ "network-online.target" ];
-      serviceConfig = {
-        EnvironmentFile = cfg.environmentFile;
-      };
+      environmentFiles = [ cfg.environmentFile ];
     };
   };
 }
