@@ -1,7 +1,6 @@
 {
   config,
   lib,
-  pkgs,
   ...
 }:
 
@@ -36,6 +35,12 @@ in
       default = "fusionsolar";
     };
 
+    image = mkOption {
+      description = "Which cf-torrent image to use";
+      default = "ghcr.io/lucasew/fusionsolar-bot:latest";
+      type = types.str;
+    };
+
     calendar = mkOption {
       type = types.str;
       default = "20:00:01";
@@ -53,8 +58,15 @@ in
         Unit = "fusionsolar-reporter.service";
       };
     };
+
+    virtualisation.oci-containers.containers.fusionsolar-reporter = {
+      inherit (cfg) image;
+      pull = "always";
+      serviceName = "fusionsolar-reporter";
+      autoStart = false;
+    };
+
     systemd.services.fusionsolar-reporter = {
-      enable = true;
       requires = [ "network-online.target" ];
       serviceConfig = {
         EnvironmentFile = cfg.environmentFile;
@@ -62,9 +74,6 @@ in
         User = cfg.user;
         Group = cfg.group;
       };
-      script = ''
-        exec ${lib.getExe (pkgs.python3Packages.callPackage ./package.nix {})} --headless
-      '';
     };
   };
 }
