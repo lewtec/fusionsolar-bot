@@ -64,6 +64,7 @@ in
       pull = "always";
       serviceName = "fusionsolar-reporter";
       autoStart = false;
+      user = cfg.user;
     };
 
     systemd.services.fusionsolar-reporter = {
