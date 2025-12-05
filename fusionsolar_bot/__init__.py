@@ -188,7 +188,7 @@ def send_email(smtp_user, smtp_from, smtp_passwd, smtp_server, destinations, sub
     with smtplib.SMTP(server_name, server_port) as server:
         server.starttls(context=context)
         server.login(smtp_user, smtp_passwd)
-        server.sendmail(smtp_user, destinations.split(), message.as_string())
+        server.sendmail(smtp_from, destinations.split(), message.as_string())
 
 def main():
     parser = ArgumentParser(description="FusionSolar data collector")
