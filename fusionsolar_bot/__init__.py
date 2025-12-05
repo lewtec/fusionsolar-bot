@@ -167,10 +167,10 @@ def collect_station_data(driver, stations_data):
 
     return email_text, attachments
 
-def send_email(smtp_user, smtp_passwd, smtp_server, destinations, subject, body_text, attachments):
+def send_email(smtp_user, smtp_from, smtp_passwd, smtp_server, destinations, subject, body_text, attachments):
     """Send email with attachments."""
     message = MIMEMultipart()
-    message['From'] = smtp_user
+    message['From'] = smtp_from
     message['To'] = destinations.replace(' ', ', ')
     message['Subject'] = subject
 
@@ -195,6 +195,7 @@ def main():
     parser.add_argument("--user", default=os.getenv("FUSIONSOLAR_USER"), help="FusionSolar username")
     parser.add_argument("--password", default=os.getenv("FUSIONSOLAR_PASSWORD"), help="FusionSolar password")
     parser.add_argument('--smtp-user', default=os.getenv("SMTP_USER"), help="SMTP username")
+    parser.add_argument('--smtp-from', default=os.environ.get("SMTP_FROM", os.getenv("SMTP_USER")), help="SMTP username")
     parser.add_argument('--smtp-passwd', default=os.getenv("SMTP_PASSWD"), help="SMTP password")
     parser.add_argument('--smtp-server', default=os.getenv("SMTP_SERVER"), help="SMTP server (format: server:port)")
     parser.add_argument('--smtp-destinations', default=os.getenv("SMTP_DESTINATIONS"), help="Email recipients (space separated)")
@@ -241,6 +242,7 @@ def main():
                 subject = f"Relatório do dia {str(now).split(' ')[0]} FusionSolar"
                 send_email(
                     args.smtp_user,
+                    args.smtp_from,
                     args.smtp_passwd,
                     args.smtp_server,
                     args.smtp_destinations,
