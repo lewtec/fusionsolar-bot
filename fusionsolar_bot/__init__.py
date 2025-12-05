@@ -179,15 +179,14 @@ def send_email(smtp_user, smtp_passwd, smtp_server, destinations, subject, body_
         message.attach(attachment)
 
     context = ssl.create_default_context()
-    context.check_hostname = False
-    context.verify_mode = ssl.CERT_NONE
 
     server_parts = smtp_server.split(":")
     server_name = server_parts[0]
-    server_port = int(server_parts[1]) if len(server_parts) > 1 else 465
+    server_port = int(server_parts[1]) if len(server_parts) > 1 else 587
 
     print('[*] Enviando emails', file=stderr)
-    with smtplib.SMTP_SSL(server_name, server_port, context=context) as server:
+    with smtplib.SMTP(server_name, server_port) as server:
+        server.starttls(context=context)
         server.login(smtp_user, smtp_passwd)
         server.sendmail(smtp_user, destinations.split(), message.as_string())
 
