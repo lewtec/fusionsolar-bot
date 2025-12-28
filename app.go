@@ -13,6 +13,10 @@ import (
 
 	"github.com/getsentry/sentry-go"
 	"github.com/go-rod/rod"
+	"os"
+	"os/exec"
+	"path/filepath"
+
 	"github.com/go-rod/rod/lib/input"
 	"github.com/go-rod/rod/lib/launcher"
 )
@@ -100,6 +104,22 @@ func (a *App) setupSentry() {
 
 func (a *App) setupBrowser() *rod.Browser {
 	l := launcher.New()
+
+	chromiumPath := os.Getenv("CHROMIUM")
+	if chromiumPath == "" {
+		chromiumPath = "chromium"
+	}
+
+	if filepath.IsAbs(chromiumPath) {
+		l = l.Bin(chromiumPath)
+	} else {
+		path, err := exec.LookPath(chromiumPath)
+		if err == nil {
+			l = l.Bin(path)
+		} else {
+			slog.Debug("Chromium executable not found in PATH, falling back to default launcher logic", "path", chromiumPath)
+		}
+	}
 
 	if a.Headless {
 		l = l.Headless(true).
