@@ -4,6 +4,7 @@
 , fontconfig
 , default
 , cacert
+, chromium
 }:
 
 let
@@ -24,6 +25,7 @@ dockerTools.streamLayeredImage {
   contents = [
     dockerTools.binSh
     cacert
+    chromium
     (dockerTools.fakeNss.override {
       extraPasswdLines = ["${user.name}:x:${toString user.uid}:${toString user.gid}:new user:/tmp:/bin/sh"];
       extraGroupLines = ["${user.name}:x:${toString user.gid}:"];
