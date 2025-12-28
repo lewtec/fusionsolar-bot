@@ -140,6 +140,7 @@ func (a *App) setupBrowser() *rod.Browser {
 	}
 
 	if a.Headless {
+		slog.Warn("[!] Running in headless mode with --no-sandbox. Disabling the Chromium sandbox is a security risk. Make sure you trust the content being opened.")
 		l = l.Headless(true).
 			Set("disable-gpu").
 			Set("disable-dev-shm-usage").
