@@ -201,10 +201,10 @@ func (a *App) getStations(page *rod.Page) ([]StationData, error) {
 			}
 		} else {
 			for _, station := range stations {
-				href := station.MustAttribute("href")
+				href := station.MustProperty("href").String()
 				name := station.MustText()
 				sData := StationData{
-					URL:  *href,
+					URL:  href,
 					Name: name,
 				}
 				slog.Info(fmt.Sprintf("%v", sData))
