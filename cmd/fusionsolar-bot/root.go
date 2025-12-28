@@ -93,8 +93,6 @@ func initConfig() {
 		viper.SetConfigName(".fusionsolar-bot")
 	}
 
-	viper.AutomaticEnv()
-
 	// Map environment variables to match Python script's expectations
 	viper.BindEnv("user", "FUSIONSOLAR_USER")
 	viper.BindEnv("password", "FUSIONSOLAR_PASSWORD")
