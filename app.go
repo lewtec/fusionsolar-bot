@@ -5,18 +5,19 @@ import (
 	_ "embed"
 	"encoding/base64"
 	"fmt"
+	"gopkg.in/gomail.v2"
+	"io"
 	"log/slog"
 	"net"
-	"net/smtp"
+	"os"
+	"os/exec"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/getsentry/sentry-go"
 	"github.com/go-rod/rod"
-	"os"
-	"os/exec"
-	"path/filepath"
 
 	"github.com/go-rod/rod/lib/input"
 	"github.com/go-rod/rod/lib/launcher"
@@ -309,65 +310,35 @@ func (a *App) collectStationData(page *rod.Page, stationsData []StationData) ([]
 
 func (a *App) sendEmail(subject, body string, attachments []Attachment) {
 	slog.Info("[*] Enviando emails")
-	server := a.SmtpServer
 
-	// Ensure port is present
-	if !strings.Contains(server, ":") {
-		server = server + ":587"
-	}
+	m := gomail.NewMessage()
+	m.SetHeader("From", a.SmtpFrom)
+	m.SetHeader("To", strings.Split(a.SmtpDestinations, " ")...)
+	m.SetHeader("Subject", subject)
+	m.SetBody("text/plain", body)
 
-	// Split server host:port
-	host, _, _ := net.SplitHostPort(server)
-
-	// Set up authentication information.
-	auth := smtp.PlainAuth("", a.SmtpUser, a.SmtpPasswd, host)
-
-	// Create the message
-	boundary := "fusionsolar-boundary"
-	header := make(map[string]string)
-	header["From"] = a.SmtpFrom
-	toAddrs := strings.Split(a.SmtpDestinations, " ")
-	header["To"] = strings.Join(toAddrs, ", ")
-	header["Subject"] = subject
-	header["MIME-Version"] = "1.0"
-	header["Content-Type"] = "multipart/mixed; boundary=" + boundary
-
-	var msgBuilder strings.Builder
-	for k, v := range header {
-		msgBuilder.WriteString(fmt.Sprintf("%s: %s\r\n", k, v))
-	}
-	msgBuilder.WriteString("\r\n")
-
-	// Body
-	msgBuilder.WriteString(fmt.Sprintf("--%s\r\n", boundary))
-	msgBuilder.WriteString("Content-Type: text/plain; charset=\"utf-8\"\r\n")
-	msgBuilder.WriteString("\r\n")
-	msgBuilder.WriteString(body)
-	msgBuilder.WriteString("\r\n")
-
-	// Attachments
 	for _, att := range attachments {
-		msgBuilder.WriteString(fmt.Sprintf("--%s\r\n", boundary))
-		msgBuilder.WriteString("Content-Type: image/png\r\n")
-		msgBuilder.WriteString("Content-Transfer-Encoding: base64\r\n")
-		msgBuilder.WriteString(fmt.Sprintf("Content-Disposition: attachment; filename=\"%s\"\r\n", att.Name))
-		msgBuilder.WriteString("\r\n")
-
-		b64 := base64.StdEncoding.EncodeToString(att.Content)
-		// Split lines at 76 chars
-		for i := 0; i < len(b64); i += 76 {
-			end := i + 76
-			if end > len(b64) {
-				end = len(b64)
-			}
-			msgBuilder.WriteString(b64[i:end] + "\r\n")
-		}
-		msgBuilder.WriteString("\r\n")
+		m.Attach(att.Name, gomail.SetCopyFunc(func(w io.Writer) error {
+			_, err := w.Write(att.Content)
+			return err
+		}))
 	}
-	msgBuilder.WriteString(fmt.Sprintf("--%s--\r\n", boundary))
 
-	err := smtp.SendMail(server, auth, a.SmtpFrom, toAddrs, []byte(msgBuilder.String()))
+	host, portStr, err := net.SplitHostPort(a.SmtpServer)
 	if err != nil {
+		// a.SmtpServer might not have a port, try to append default
+		host = a.SmtpServer
+		portStr = "587"
+	}
+	port, err := strconv.Atoi(portStr)
+	if err != nil {
+		slog.Error("invalid smtp port", "error", err)
+		return
+	}
+
+	d := gomail.NewDialer(host, port, a.SmtpUser, a.SmtpPasswd)
+
+	if err := d.DialAndSend(m); err != nil {
 		slog.Error("Error sending email", "error", err)
 	}
 }
