@@ -6,6 +6,8 @@ import (
 	"log"
 	"os"
 
+	"fusionsolar-bot/fusionsolar"
+
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -110,7 +112,7 @@ func initConfig() {
 }
 
 func runBot() {
-	app := App{
+	app := fusionsolar.App{
 		User:             viper.GetString("user"),
 		Password:         viper.GetString("password"),
 		SmtpUser:         viper.GetString("smtp-user"),
