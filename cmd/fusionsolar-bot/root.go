@@ -13,19 +13,19 @@ import (
 )
 
 var (
-	cfgFile           string
-	user              string
-	password          string
-	smtpUser          string
-	smtpFrom          string
-	smtpPasswd        string
-	smtpServer        string
-	smtpDestinations  string
-	sentryDsn         string
-	proxy             string
-	headless          bool
-	verbose           bool
-	version           bool
+	cfgFile          string
+	user             string
+	password         string
+	smtpUser         string
+	smtpFrom         string
+	smtpPasswd       string
+	smtpServer       string
+	smtpDestinations string
+	sentryDsn        string
+	proxy            string
+	headless         bool
+	verbose          bool
+	version          bool
 )
 
 var rootCmd = &cobra.Command{
