@@ -3,8 +3,5 @@
   "extends": [
     "github>lewtec/renovate-config:base",
     "config:recommended"
-  ],
-  "nix": {
-    "enabled": true
-  }
+  ]
 }

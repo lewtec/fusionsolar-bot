@@ -4,33 +4,23 @@ Puxa os dados de produção do dia do Fusion Solar e manda para a lista de e-mai
 
 ## Como "instalar"
 
-### Nix
-Você vai precisar da funcionalidade de flakes
-
-```bash
-nix run github:lucasew/fusion-solar -- [parametros]
-```
-
-### NixOS
-O repositório fornece um módulo NixOS. Em um dos módulos da sua config você adiciona o
-módulo default do flake, usa alguma forma, como o `sops-nix` para gerar o arquivo de credencial e
-habilita da seguinte forma:
-
-```nix
-{
-  services.fusionsolar-reporter = {
-    enable = true;
-    environmentFile = "..."; # onde o sops-nix, por exemplo, salva o arquivo com as variáveis de ambiente
-    calendar = "..."; # quando executar a automação, padrão: todo dia 20h
-  };
-}
-```
-
 ### Docker
-A cada release é gerada uma versão autocontida em container Docker
+Para rodar a versão mais recente diretamente do registro:
 
 ```bash
 docker run ghcr.io/lucasew/fusionsolar-bot:latest [parametros]
+```
+
+Para construir a imagem localmente:
+
+```bash
+docker build -t fusionsolar-bot .
+```
+
+E para rodar a imagem construída localmente:
+
+```bash
+docker run fusionsolar-bot [parametros]
 ```
 
 Nenhum estado desse container precisa ser salvo.
