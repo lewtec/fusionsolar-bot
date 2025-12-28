@@ -115,7 +115,6 @@ func (a *App) setupBrowser() *rod.Browser {
 	}
 
 	l = l.Set("window-size", "1280,720")
-	l = l.Set("remote-debugging-pipe")
 
 	u := l.MustLaunch()
 
