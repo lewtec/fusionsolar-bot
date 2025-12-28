@@ -25,8 +25,21 @@ docker run fusionsolar-bot [parametros]
 
 Nenhum estado desse container precisa ser salvo.
 
-### Conda/pip
-Você vai precisar do `chromium/chrome`, `chromedriver` e do `selenium`. O sistema de envio de e-mail já tá no Python.
+### Go (Binário/Source)
+Este projeto usa o [mise](https://mise.jdx.dev) para gerenciar a versão do Go. Se você tiver o `mise` instalado, basta entrar na pasta do projeto e ele baixará a versão correta do Go automaticamente.
+
+Você ainda precisará do navegador Chromium/Chrome instalado no sistema.
+
+Para rodar diretamente do código fonte:
+```bash
+go run ./cmd/fusionsolar-bot [parametros]
+```
+
+Para compilar e instalar:
+```bash
+go install ./cmd/fusionsolar-bot
+fusionsolar-bot [parametros]
+```
 
 ### GitHub Actions
 Considerado experimental.
@@ -42,16 +55,20 @@ Esse projeto faz basicamente duas coisas:
 
 Se as informações sobre o e-mail estão incompetas ele busca as informações igual, só não manda email. Bom pra testar.
 
-Parâmetros no formato `flag/variável de ambiente`.
+Parâmetros no formato `flag` / `variável de ambiente`.
 
-- `--user/FUSIONSOLAR_USER`: usuário para logar no fusionsolar, usuários errados podem falhar silenciosamente
-- `--password/FUSIONSOLAR_PASSWORD`: usuário para logar no fusionsolar, senhas erradas podem falhar silenciosamente
-- `--smtp-user/SMTP_USER`: usuário para logar no SMTP do servidor para enviar e-mail
-- `--smtp-password/SMTP_PASSWD`: senha para logar no SMTP do servidor para enviar e-mail
-- `--smtp-server/SMTP_SERVER`: servidor SMTP para envio do email
-- `--smtp-destinations/SMTP_DESTINATIONS`: lista de e-mails para enviar os resultados separada por espaço
-- `--headless`: não mostar janela do chrome usada na automação, usada internamente
-- `--verbose`: dar mais detalhes sobre o que tá acontecendo, bom pra debug
+- `--user` / `FUSIONSOLAR_USER`: usuário para logar no fusionsolar
+- `--password` / `FUSIONSOLAR_PASSWORD`: senha para logar no fusionsolar
+- `--smtp-user` / `SMTP_USER`: usuário para logar no SMTP do servidor para enviar e-mail
+- `--smtp-from` / `SMTP_FROM`: remetente do e-mail (opcional, padrão: smtp-user)
+- `--smtp-passwd` / `SMTP_PASSWD`: senha para logar no SMTP do servidor para enviar e-mail
+- `--smtp-server` / `SMTP_SERVER`: servidor SMTP para envio do email (host:port)
+- `--smtp-destinations` / `SMTP_DESTINATIONS`: lista de e-mails para enviar os resultados separada por espaço
+- `--sentry-dsn` / `SENTRY_DSN`: DSN do Sentry para monitoramento de erros
+- `--proxy` / `SELENIUM_PROXY_SERVER`: servidor proxy para o Selenium
+- `--headless` (apenas flag): rodar o navegador em modo headless (sem interface gráfica), padrão em containers
+- `--verbose` (apenas flag): dar mais detalhes sobre o que está acontecendo, bom para debug
+- `--version`: exibe a versão do programa
 
 ## Recomendações
 - Não use G-Mail como provedor de SMTP, muito menos sua conta pessoal. Eu uso uma conta
