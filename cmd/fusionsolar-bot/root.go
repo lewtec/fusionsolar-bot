@@ -6,7 +6,7 @@ import (
 	"log"
 	"os"
 
-	"fusionsolar-bot/fusionsolar"
+	fusionsolar "fusionsolar-bot"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
