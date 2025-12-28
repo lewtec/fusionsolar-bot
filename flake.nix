@@ -11,8 +11,8 @@
     pkgs = import nixpkgs { inherit system; };
   in {
     packages = rec {
-      default = pkgs.python3Packages.callPackage ./package.nix {};
-      container = pkgs.python3Packages.callPackage ./container.nix { inherit self default; };
+      default = pkgs.callPackage ./package.nix {};
+      container = pkgs.callPackage ./container.nix { inherit self default; };
       docker-deploy = let
         inherit (self.packages.${system}) container;
         version = "$(cat version.txt)";

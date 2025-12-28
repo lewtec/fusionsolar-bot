@@ -1,5 +1,4 @@
 { dockerTools
-, python3Packages
 , lib
 , self
 , fontconfig

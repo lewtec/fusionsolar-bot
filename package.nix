@@ -1,30 +1,23 @@
-{ chromedriver
+{ lib
+, buildGoModule
 , chromium
-, selenium
-, sentry-sdk
-, hatchling
-, buildPythonPackage
-, lib
-, python
+, makeWrapper
 }:
 
-buildPythonPackage {
+buildGoModule {
   pname = "fusionsolar-bot";
   version = builtins.readFile ./version.txt;
-  pyproject = true;
 
   src = ./.;
 
-  build-system = [ hatchling ];
-  dependencies = [ selenium sentry-sdk ];
+  vendorHash = "sha256-etxK2HPE+X5bsYyQKNRpvb4BLzP9JW+0bxpPQocgrBg=";
 
-  makeWrapperArgs = [
-    "--prefix" "PATH" ":" "${lib.makeBinPath [ chromedriver chromium ]}"
-  ];
+  nativeBuildInputs = [ makeWrapper ];
 
-  # Add proper checkInputs if there are tests
-  checkInputs = [ python.pkgs.pytest ];
-  pythonImportsCheck = [ "fusionsolar_bot" ];
+  postInstall = ''
+    wrapProgram $out/bin/fusionsolar-bot \
+      --prefix PATH : ${lib.makeBinPath [ chromium ]}
+  '';
 
   meta = {
     description = "A bot for interacting with FusionSolar";
