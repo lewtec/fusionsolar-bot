@@ -51,9 +51,23 @@ func (a *App) Run(ctx context.Context) error {
 	}
 
 	// Check if email is enabled
-	emailEnabled := a.SmtpUser != "" && a.SmtpPasswd != "" && a.SmtpServer != "" && a.SmtpDestinations != ""
+	var missingEmailParams []string
+	if a.SmtpUser == "" {
+		missingEmailParams = append(missingEmailParams, "SMTP_USER")
+	}
+	if a.SmtpPasswd == "" {
+		missingEmailParams = append(missingEmailParams, "SMTP_PASSWD")
+	}
+	if a.SmtpServer == "" {
+		missingEmailParams = append(missingEmailParams, "SMTP_SERVER")
+	}
+	if a.SmtpDestinations == "" {
+		missingEmailParams = append(missingEmailParams, "SMTP_DESTINATIONS")
+	}
+
+	emailEnabled := len(missingEmailParams) == 0
 	if !emailEnabled {
-		slog.Warn("[!] Funcionalidade de email desativada")
+		slog.Warn(fmt.Sprintf("[!] Funcionalidade de email desativada. Motivo: Variáveis de ambiente/flags faltando: %s", strings.Join(missingEmailParams, ", ")))
 	}
 
 	// Setup Browser
@@ -93,7 +107,7 @@ func (a *App) Run(ctx context.Context) error {
 
 func (a *App) setupSentry() {
 	if a.SentryDsn == "" {
-		slog.Warn("[!] Sentry: DSN não especificado")
+		slog.Warn("[!] Sentry: DSN não especificado. Variável de ambiente/flag faltando: SENTRY_DSN")
 		return
 	}
 	slog.Info("[*] Configurando sentry")
