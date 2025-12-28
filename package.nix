@@ -1,30 +1,26 @@
-{ chromedriver
+{ lib
+, buildGoModule
 , chromium
-, selenium
-, sentry-sdk
-, hatchling
-, buildPythonPackage
-, lib
-, python
+, makeWrapper
 }:
 
-buildPythonPackage {
+buildGoModule {
   pname = "fusionsolar-bot";
   version = builtins.readFile ./version.txt;
-  pyproject = true;
 
   src = ./.;
 
-  build-system = [ hatchling ];
-  dependencies = [ selenium sentry-sdk ];
+  # vendorHash = null; # Use this if you don't want to enforce vendor consistency, or use specific hash
+  # I cannot generate the hash without internet access in the nix build environment.
+  # The user should update this hash by running `nix build` and copying the expected hash.
+  vendorHash = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
 
-  makeWrapperArgs = [
-    "--prefix" "PATH" ":" "${lib.makeBinPath [ chromedriver chromium ]}"
-  ];
+  nativeBuildInputs = [ makeWrapper ];
 
-  # Add proper checkInputs if there are tests
-  checkInputs = [ python.pkgs.pytest ];
-  pythonImportsCheck = [ "fusionsolar_bot" ];
+  postInstall = ''
+    wrapProgram $out/bin/fusionsolar-bot \
+      --prefix PATH : ${lib.makeBinPath [ chromium ]}
+  '';
 
   meta = {
     description = "A bot for interacting with FusionSolar";
