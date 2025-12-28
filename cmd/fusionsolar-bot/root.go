@@ -62,7 +62,9 @@ func init() {
 	rootCmd.Flags().StringVar(&smtpDestinations, "smtp-destinations", "", "Email recipients (space separated)")
 	rootCmd.Flags().StringVar(&sentryDsn, "sentry-dsn", "", "Sentry DSN for error tracking")
 	rootCmd.Flags().StringVar(&proxy, "proxy", "", "Proxy server for Selenium")
-	rootCmd.Flags().BoolVar(&headless, "headless", false, "Run Chrome in headless mode")
+
+	defaultHeadless := os.Getenv("DISPLAY") == ""
+	rootCmd.Flags().BoolVar(&headless, "headless", defaultHeadless, "Run Chrome in headless mode")
 	rootCmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "Enable verbose logging")
 	rootCmd.Flags().BoolVar(&version, "version", false, "Print version and exit")
 
