@@ -2,6 +2,7 @@ package fusionsolar
 
 import (
 	"context"
+	_ "embed"
 	"encoding/base64"
 	"fmt"
 	"log/slog"
@@ -20,6 +21,9 @@ import (
 	"github.com/go-rod/rod/lib/input"
 	"github.com/go-rod/rod/lib/launcher"
 )
+
+//go:embed version.txt
+var Version string
 
 type App struct {
 	User             string
