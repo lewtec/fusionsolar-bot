@@ -25,6 +25,7 @@ var (
 	proxy             string
 	headless          bool
 	verbose           bool
+	version           bool
 )
 
 var rootCmd = &cobra.Command{
@@ -32,6 +33,10 @@ var rootCmd = &cobra.Command{
 	Short: "FusionSolar data collector",
 	Long:  `A bot to collect data from FusionSolar and send reports via email.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		if version {
+			fmt.Println(fusionsolar.Version)
+			os.Exit(0)
+		}
 		runBot()
 	},
 }
@@ -59,6 +64,7 @@ func init() {
 	rootCmd.Flags().StringVar(&proxy, "proxy", "", "Proxy server for Selenium")
 	rootCmd.Flags().BoolVar(&headless, "headless", false, "Run Chrome in headless mode")
 	rootCmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "Enable verbose logging")
+	rootCmd.Flags().BoolVar(&version, "version", false, "Print version and exit")
 
 	bindFlags()
 }
