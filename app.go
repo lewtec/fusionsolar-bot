@@ -292,10 +292,14 @@ func (a *App) collectStationData(page *rod.Page, stationsData []StationData) ([]
 		valEl := page.MustElement("span.value")
 		valText := valEl.MustText()
 		valText = strings.ReplaceAll(valText, ",", ".")
-		amountProduced, _ := strconv.ParseFloat(valText, 64)
-
-		emailText = append(emailText, fmt.Sprintf("%s: %vkWh", station.Name, amountProduced))
-		slog.Info(fmt.Sprintf("[*] Produzido hoje: %vkWh", amountProduced))
+		amountProduced, err := strconv.ParseFloat(valText, 64)
+		if err != nil {
+			slog.Error(fmt.Sprintf("Error parsing production amount for station %s", station.Name), "error", err, "value", valText)
+			emailText = append(emailText, fmt.Sprintf("%s: Falha ao obter dados", station.Name))
+		} else {
+			emailText = append(emailText, fmt.Sprintf("%s: %vkWh", station.Name, amountProduced))
+			slog.Info(fmt.Sprintf("[*] Produzido hoje: %vkWh", amountProduced))
+		}
 	}
 
 	emailText = append(emailText,
