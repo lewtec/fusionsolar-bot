@@ -86,9 +86,9 @@ func (a *App) Run(ctx context.Context) error {
 	}
 
 	// Collect Data
-	emailText, attachments := a.collectStationData(page, stationsData)
+	emailBody, attachments := a.collectStationData(page, stationsData)
 
-	fmt.Println(strings.Join(emailText, "\n"))
+	fmt.Println(emailBody)
 
 	if emailEnabled {
 		if a.SmtpFrom == "" {
@@ -99,7 +99,7 @@ func (a *App) Run(ctx context.Context) error {
 
 		a.sendEmail(
 			subject,
-			strings.Join(emailText, "\n"),
+			emailBody,
 			attachments,
 		)
 	}
@@ -259,8 +259,9 @@ type Attachment struct {
 	Content []byte
 }
 
-func (a *App) collectStationData(page *rod.Page, stationsData []StationData) ([]string, []Attachment) {
-	emailText := []string{"Quantidade de energia produzida em cada base", ""}
+func (a *App) collectStationData(page *rod.Page, stationsData []StationData) (string, []Attachment) {
+	var emailBody strings.Builder
+	emailBody.WriteString("Quantidade de energia produzida em cada base\n\n")
 	var attachments []Attachment
 
 	for _, station := range stationsData {
@@ -292,20 +293,20 @@ func (a *App) collectStationData(page *rod.Page, stationsData []StationData) ([]
 		valEl := page.MustElement("span.value")
 		valText := valEl.MustText()
 		valText = strings.ReplaceAll(valText, ",", ".")
-		amountProduced, _ := strconv.ParseFloat(valText, 64)
-
-		emailText = append(emailText, fmt.Sprintf("%s: %vkWh", station.Name, amountProduced))
-		slog.Info(fmt.Sprintf("[*] Produzido hoje: %vkWh", amountProduced))
+		amountProduced, err := strconv.ParseFloat(valText, 64)
+		if err != nil {
+			slog.Error(fmt.Sprintf("Error parsing production amount for station %s", station.Name), "error", err, "value", valText)
+			fmt.Fprintf(&emailBody, "%s: Falha ao obter dados\n", station.Name)
+		} else {
+			fmt.Fprintf(&emailBody, "%s: %vkWh\n", station.Name, amountProduced)
+			slog.Info(fmt.Sprintf("[*] Produzido hoje: %vkWh", amountProduced))
+		}
 	}
 
-	emailText = append(emailText,
-		"",
-		"Os gráficos de geração estão em anexo.",
-		"",
-		fmt.Sprintf("Dados obtidos em: %s", time.Now().Format("2006-01-02 15:04:05")),
-	)
+	fmt.Fprintf(&emailBody, "\nOs gráficos de geração estão em anexo.\n\n")
+	fmt.Fprintf(&emailBody, "Dados obtidos em: %s\n", time.Now().Format("2006-01-02 15:04:05"))
 
-	return emailText, attachments
+	return emailBody.String(), attachments
 }
 
 func (a *App) sendEmail(subject, body string, attachments []Attachment) {

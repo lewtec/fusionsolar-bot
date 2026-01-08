@@ -1,0 +1,5 @@
+## 2024-07-25 - Handle Error on Production Data Parsing
+**Issue:** In `app.go`, the `collectStationData` function was ignoring a potential error from `strconv.ParseFloat` when parsing the production amount string into a float.
+**Root Cause:** The error was discarded with `_`, so if the string was not a valid float (e.g., empty or malformed), the error would be silently ignored, and the `amountProduced` would be zero, leading to incorrect or misleading reports.
+**Solution:** I added error handling to check the result of `strconv.ParseFloat`. If an error is returned, the code now logs the error with `slog.Error` and appends a user-friendly failure message to the email report for the specific station.
+**Pattern:** Always check and handle errors returned from functions, especially those involving parsing or I/O. Silent failures can hide bugs and lead to incorrect data. Logging errors and providing clear feedback is crucial for maintainability.
