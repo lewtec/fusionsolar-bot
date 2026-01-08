@@ -1,0 +1,6 @@
+## 2024-08-05 - Deprecate insecure password flags
+**Vulnerability:** The application allowed passing sensitive credentials, such as the FusionSolar password and SMTP password, as command-line flags (`--password` and `--smtp-passwd`). This is a high-risk practice because command-line arguments can be exposed to other processes and users on a shared system, and may be logged in shell history.
+
+**Learning:** The application's CLI, built with Cobra, correctly supported environment variables as a more secure alternative, but the insecure flags were still available and documented, potentially encouraging their use. The principle of "secure by default" means actively discouraging insecure configurations.
+
+**Prevention:** To prevent this, I have marked the `--password` and `--smtp-passwd` flags as deprecated. This change does not break backward compatibility but warns users that the flags will be removed in a future release, guiding them to use the `FUSIONSOLAR_PASSWORD` and `SMTP_PASSWD` environment variables instead. Future development should avoid creating command-line flags for sensitive data and prioritize environment variables or other secure configuration methods.
