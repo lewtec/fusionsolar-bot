@@ -38,6 +38,7 @@ type App struct {
 	Proxy            string
 	Headless         bool
 	Verbose          bool
+	MaxLoginRetries  int
 }
 
 func (a *App) Run(ctx context.Context) error {
@@ -76,7 +77,11 @@ func (a *App) Run(ctx context.Context) error {
 	defer browser.MustClose()
 
 	// Login
-	page := a.loginToFusionSolar(browser)
+	page, err := a.loginToFusionSolar(browser)
+	if err != nil {
+		sentry.CaptureException(err)
+		return err
+	}
 
 	// Get Stations
 	stationsData, err := a.getStations(page)
@@ -166,9 +171,9 @@ func (a *App) setupBrowser() *rod.Browser {
 	return browser.MustConnect()
 }
 
-func (a *App) loginToFusionSolar(browser *rod.Browser) *rod.Page {
-	for {
-		slog.Info("[*] Login")
+func (a *App) loginToFusionSolar(browser *rod.Browser) (*rod.Page, error) {
+	for i := 0; i < a.MaxLoginRetries; i++ {
+		slog.Info(fmt.Sprintf("[*] Login attempt %d/%d", i+1, a.MaxLoginRetries))
 		page := browser.MustPage("https://intl.fusionsolar.huawei.com/pvmswebsite/login/build/index.html#/LOGIN")
 
 		page.MustWaitLoad()
@@ -206,10 +211,11 @@ func (a *App) loginToFusionSolar(browser *rod.Browser) *rod.Page {
 		// Check if logged in
 		url := page.MustInfo().URL
 		if !strings.Contains(url, "login") {
-			return page
+			return page, nil
 		}
 		slog.Info("[*] Reiniciando processo de login")
 	}
+	return nil, fmt.Errorf("failed to login after %d attempts", a.MaxLoginRetries)
 }
 
 type StationData struct {
