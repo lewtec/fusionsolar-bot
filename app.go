@@ -141,6 +141,7 @@ func (a *App) setupBrowser() *rod.Browser {
 	}
 
 	if a.Headless {
+		slog.Warn("[!] Rod is running in headless mode with the --no-sandbox flag. This is a security risk and should be avoided. The sandbox is a security feature that prevents web pages from exploiting vulnerabilities in the browser to gain access to the underlying operating system.")
 		l = l.Headless(true).
 			Set("disable-gpu").
 			Set("disable-dev-shm-usage").
