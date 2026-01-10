@@ -10,8 +10,6 @@ import (
 	"log/slog"
 	"net"
 	"os"
-	"os/exec"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -129,20 +127,8 @@ func (a *App) setupSentry() {
 func (a *App) setupBrowser() *rod.Browser {
 	l := launcher.New()
 
-	chromiumPath := os.Getenv("CHROMIUM")
-	if chromiumPath == "" {
-		chromiumPath = "chromium"
-	}
-
-	if filepath.IsAbs(chromiumPath) {
-		l = l.Bin(chromiumPath)
-	} else {
-		path, err := exec.LookPath(chromiumPath)
-		if err == nil {
-			l = l.Bin(path)
-		} else {
-			slog.Debug("Chromium executable not found in PATH, falling back to default launcher logic", "path", chromiumPath)
-		}
+	if chromiumPath := os.Getenv("CHROMIUM"); chromiumPath != "" {
+		l.Bin(chromiumPath)
 	}
 
 	if a.Headless {
