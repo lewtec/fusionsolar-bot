@@ -58,10 +58,10 @@ Se as informações sobre o e-mail estão incompetas ele busca as informações 
 Parâmetros no formato `flag` / `variável de ambiente`.
 
 - `--user` / `FUSIONSOLAR_USER`: usuário para logar no fusionsolar
-- `--password` / `FUSIONSOLAR_PASSWORD`: senha para logar no fusionsolar
+- `FUSIONSOLAR_PASSWORD`: senha para logar no fusionsolar
 - `--smtp-user` / `SMTP_USER`: usuário para logar no SMTP do servidor para enviar e-mail
 - `--smtp-from` / `SMTP_FROM`: remetente do e-mail (opcional, padrão: smtp-user)
-- `--smtp-passwd` / `SMTP_PASSWD`: senha para logar no SMTP do servidor para enviar e-mail
+- `SMTP_PASSWD`: senha para logar no SMTP do servidor para enviar e-mail
 - `--smtp-server` / `SMTP_SERVER`: servidor SMTP para envio do email (host:port)
 - `--smtp-destinations` / `SMTP_DESTINATIONS`: lista de e-mails para enviar os resultados separada por espaço
 - `--sentry-dsn` / `SENTRY_DSN`: DSN do Sentry para monitoramento de erros

@@ -56,9 +56,11 @@ func init() {
 
 	rootCmd.Flags().StringVar(&user, "user", "", "FusionSolar username")
 	rootCmd.Flags().StringVar(&password, "password", "", "FusionSolar password")
+	rootCmd.Flags().MarkDeprecated("password", "use FUSIONSOLAR_PASSWORD environment variable instead")
 	rootCmd.Flags().StringVar(&smtpUser, "smtp-user", "", "SMTP username")
 	rootCmd.Flags().StringVar(&smtpFrom, "smtp-from", "", "SMTP username (default to smtp-user if not provided)")
 	rootCmd.Flags().StringVar(&smtpPasswd, "smtp-passwd", "", "SMTP password")
+	rootCmd.Flags().MarkDeprecated("smtp-passwd", "use SMTP_PASSWD environment variable instead")
 	rootCmd.Flags().StringVar(&smtpServer, "smtp-server", "", "SMTP server (format: server:port)")
 	rootCmd.Flags().StringVar(&smtpDestinations, "smtp-destinations", "", "Email recipients (space separated)")
 	rootCmd.Flags().StringVar(&sentryDsn, "sentry-dsn", "", "Sentry DSN for error tracking")
