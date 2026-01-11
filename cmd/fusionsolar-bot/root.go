@@ -55,10 +55,8 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.fusionsolar-bot.yaml)")
 
 	rootCmd.Flags().StringVar(&user, "user", "", "FusionSolar username")
-	rootCmd.Flags().StringVar(&password, "password", "", "FusionSolar password")
 	rootCmd.Flags().StringVar(&smtpUser, "smtp-user", "", "SMTP username")
 	rootCmd.Flags().StringVar(&smtpFrom, "smtp-from", "", "SMTP username (default to smtp-user if not provided)")
-	rootCmd.Flags().StringVar(&smtpPasswd, "smtp-passwd", "", "SMTP password")
 	rootCmd.Flags().StringVar(&smtpServer, "smtp-server", "", "SMTP server (format: server:port)")
 	rootCmd.Flags().StringVar(&smtpDestinations, "smtp-destinations", "", "Email recipients (space separated)")
 	rootCmd.Flags().StringVar(&sentryDsn, "sentry-dsn", "", "Sentry DSN for error tracking")
@@ -75,10 +73,8 @@ func init() {
 
 func bindFlags() {
 	viper.BindPFlag("user", rootCmd.Flags().Lookup("user"))
-	viper.BindPFlag("password", rootCmd.Flags().Lookup("password"))
 	viper.BindPFlag("smtp-user", rootCmd.Flags().Lookup("smtp-user"))
 	viper.BindPFlag("smtp-from", rootCmd.Flags().Lookup("smtp-from"))
-	viper.BindPFlag("smtp-passwd", rootCmd.Flags().Lookup("smtp-passwd"))
 	viper.BindPFlag("smtp-server", rootCmd.Flags().Lookup("smtp-server"))
 	viper.BindPFlag("smtp-destinations", rootCmd.Flags().Lookup("smtp-destinations"))
 	viper.BindPFlag("sentry-dsn", rootCmd.Flags().Lookup("sentry-dsn"))
