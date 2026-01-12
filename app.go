@@ -129,12 +129,23 @@ func (a *App) setupBrowser() *rod.Browser {
 
 	if chromiumPath := os.Getenv("CHROMIUM"); chromiumPath != "" {
 		l.Bin(chromiumPath)
+	} else {
+		// Try to find the browser if env is not set
+		if path, _ := launcher.LookPath(); path != "" {
+			l.Bin(path)
+		} else {
+			// Fallback for alpine
+			if _, err := os.Stat("/usr/bin/chromium-browser"); err == nil {
+				l.Bin("/usr/bin/chromium-browser")
+			}
+		}
 	}
 
 	if a.Headless {
 		l = l.Headless(true).
 			Set("disable-gpu").
 			Set("disable-dev-shm-usage").
+			Set("disable-setuid-sandbox").
 			Set("no-sandbox")
 	} else {
 		l = l.Headless(false)
@@ -275,7 +286,7 @@ func (a *App) collectStationData(page *rod.Page, stationsData []StationData) (st
 
 		imgBytes, err := base64.StdEncoding.DecodeString(b64)
 		if err != nil {
-			slog.Error(fmt.Sprintf("Error decoding base64 image for station %s", station.Name), "error", err)
+			slog.Error("Error decoding base64 image", "station", station.Name, "error", err)
 			continue
 		}
 		attachments = append(attachments, Attachment{
@@ -289,7 +300,7 @@ func (a *App) collectStationData(page *rod.Page, stationsData []StationData) (st
 		valText = strings.ReplaceAll(valText, ",", ".")
 		amountProduced, err := strconv.ParseFloat(valText, 64)
 		if err != nil {
-			slog.Error(fmt.Sprintf("Error parsing production amount for station %s", station.Name), "error", err, "value", valText)
+			slog.Error("Error parsing production amount", "station", station.Name, "error", err, "value", valText)
 			fmt.Fprintf(&emailBody, "%s: Falha ao obter dados\n", station.Name)
 		} else {
 			fmt.Fprintf(&emailBody, "%s: %vkWh\n", station.Name, amountProduced)
