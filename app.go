@@ -125,13 +125,23 @@ func (a *App) setupSentry() {
 }
 
 func (a *App) setupBrowser() *rod.Browser {
+	browser := NewBrowser(a.Headless, a.Proxy)
+
+	if a.Verbose {
+		browser = browser.Trace(true)
+	}
+
+	return browser.MustConnect()
+}
+
+func NewBrowser(headless bool, proxy string) *rod.Browser {
 	l := launcher.New()
 
 	if chromiumPath := os.Getenv("CHROMIUM"); chromiumPath != "" {
 		l.Bin(chromiumPath)
 	}
 
-	if a.Headless {
+	if headless {
 		l = l.Headless(true).
 			Set("disable-gpu").
 			Set("disable-dev-shm-usage").
@@ -140,21 +150,15 @@ func (a *App) setupBrowser() *rod.Browser {
 		l = l.Headless(false)
 	}
 
-	if a.Proxy != "" {
-		l = l.Proxy(a.Proxy)
+	if proxy != "" {
+		l = l.Proxy(proxy)
 	}
 
 	l = l.Set("window-size", "1280,720")
 
 	u := l.MustLaunch()
 
-	browser := rod.New().ControlURL(u)
-
-	if a.Verbose {
-		browser = browser.Trace(true)
-	}
-
-	return browser.MustConnect()
+	return rod.New().ControlURL(u)
 }
 
 func (a *App) loginToFusionSolar(browser *rod.Browser) (*rod.Page, error) {
