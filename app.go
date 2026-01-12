@@ -174,18 +174,17 @@ func (a *App) loginToFusionSolar(browser *rod.Browser) (*rod.Page, error) {
 		page := browser.MustPage("https://intl.fusionsolar.huawei.com/pvmswebsite/login/build/index.html#/LOGIN")
 
 		page.MustWaitLoad()
-		page.MustElement("div#username input").MustWaitVisible().MustInput(a.User)
-		passwordInput := page.MustElement("div#password input").MustWaitVisible()
+		time.Sleep(5 * time.Second)
+
+		page.MustElement("div#username input").MustInput(a.User)
+		passwordInput := page.MustElement("div#password input")
 		passwordInput.MustInput(a.Password)
-		wait := page.MustWaitNavigation()
 		passwordInput.MustType(input.Enter)
-		wait()
+
+		time.Sleep(10 * time.Second)
 
 		// Handle cookie dialog
-		cookieButtons, err := page.Elements("i.cookiePolicy-icon")
-		if err != nil {
-			slog.Debug("Cookie dialog not found, skipping...")
-		}
+		cookieButtons := page.MustElements("i.cookiePolicy-icon")
 		for _, button := range cookieButtons {
 			slog.Info("[*] Fechando diálogo de cookie")
 			button.MustClick()
@@ -200,8 +199,9 @@ func (a *App) loginToFusionSolar(browser *rod.Browser) (*rod.Page, error) {
 
 			approveBtn, err := modal.Element("button.dpdesign-btn-primary")
 			if err == nil {
+				time.Sleep(1 * time.Second)
 				approveBtn.MustClick()
-				modal.MustWaitInvisible()
+				time.Sleep(10 * time.Second)
 			}
 		}
 
@@ -228,9 +228,7 @@ func (a *App) getStations(page *rod.Page) ([]StationData, error) {
 	for len(stationsData) == 0 && attempts < maxAttempts {
 		slog.Info("[*] Acessando homepage")
 		page.MustNavigate("https://intl.fusionsolar.huawei.com")
-		page.MustWaitLoad()
-		// Wait for the station list to appear, which signals the page is ready.
-		page.MustElementR("div.nco-home-list", "Estação")
+		time.Sleep(10 * time.Second)
 
 		slog.Info("[*] Tentando listar estações")
 		stations, err := page.Elements("a.nco-home-list-text-ellipsis")
@@ -272,7 +270,7 @@ func (a *App) collectStationData(page *rod.Page, stationsData []StationData) (st
 	for _, station := range stationsData {
 		slog.Info(fmt.Sprintf("[*] Coletando dados da estação \"%s\"", station.Name))
 		page.MustNavigate(station.URL)
-		page.MustElement(".nco-single-energy-body canvas").MustWaitVisible()
+		time.Sleep(10 * time.Second)
 
 		// Get canvas chart
 		canvas := page.MustElement(".nco-single-energy-body canvas")
