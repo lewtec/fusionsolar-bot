@@ -15,8 +15,8 @@
 **Solution:** I replaced all instances of `time.Sleep` with explicit waiting functions provided by the `go-rod` library, such as `MustWaitVisible()`, `WaitNavigation()`, and `MustElementR()`. These functions pause execution until a specific condition is met (e.g., an element is visible, a navigation event completes), making the script more robust and efficient.
 **Pattern:** Prefer explicit, condition-based waits over fixed-time delays in automation scripts. Always wait for an element to be ready or for a specific page state to be achieved before interacting with it. This prevents flakiness and improves reliability.
 
-## 2024-05-24 - Structured Logging Refactor
-**Issue:** Several `slog.Error` calls in `app.go` were using `fmt.Sprintf` to format the error message, mixing the message content with variable data.
-**Root Cause:** This practice negates the benefits of structured logging, which relies on static messages and separate key-value pairs for querying and indexing.
-**Solution:** Refactored the logging calls to use a static message string and passed variables (like station name, error details, values) as key-value pairs using `slog`'s varargs support.
-**Pattern:** Avoid using `fmt.Sprintf` in structured logging messages. Use static strings for the message and pass dynamic data as additional arguments (key-value pairs) to enable better filtering and analysis.
+## 2026-01-11 - Replace `time.Sleep` with Dynamic Waits
+**Issue:** The automation script in `app.go` relied on hardcoded `time.Sleep` delays. This is a fragile approach, as page load times can vary, leading to race conditions where the script tries to interact with elements that haven't appeared yet, or unnecessary delays that slow down execution.
+**Root Cause:** The initial implementation likely used fixed sleeps for simplicity, but this doesn't account for the unpredictable nature of network conditions and browser rendering speeds.
+**Solution:** I replaced all instances of `time.Sleep` with explicit waiting functions provided by the `go-rod` library, such as `MustWaitVisible()`, `WaitNavigation()`, and `MustElementR()`. These functions pause execution until a specific condition is met (e.g., an element is visible, a navigation event completes), making the script more robust and efficient.
+**Pattern:** Prefer explicit, condition-based waits over fixed-time delays in automation scripts. Always wait for an element to be ready or for a specific page state to be achieved before interacting with it. This prevents flakiness and improves reliability.
