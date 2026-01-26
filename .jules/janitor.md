@@ -8,3 +8,8 @@
 **Root Cause:** The loop was intended to handle login retries but lacked a mechanism to limit the number of attempts.
 **Solution:** I introduced a  variable and changed the loop to a  structure. If the login is not successful after the maximum number of retries, the function now returns an error.
 **Pattern:** Always include an exit condition in retry loops to prevent infinite loops. A maximum number of attempts with an error return is a robust way to handle repeated failures.
+## 2024-05-23 - Decouple Configuration from Application Logic
+**Issue:** `app.go` was directly reading environment variables (e.g., `CHROMIUM`) and handling string splitting for configuration, violating the separation of concerns and making the code harder to test and configure via other means (like flags).
+**Root Cause:** The `setupBrowser` method used `os.Getenv` directly, and `sendEmail` handled parsing of destination strings.
+**Solution:** Refactored `App` struct to accept `ChromiumPath` and `SmtpDestinations` (as `[]string`). Moved the environment variable binding and string parsing logic to the `cobra`/`viper` setup in `cmd/fusionsolar-bot/root.go`.
+**Pattern:** Decouple application logic from configuration sources. Pass configuration as struct fields or arguments. Use `viper` for centralized configuration management to support multiple sources (flags, env vars, config files) transparently.

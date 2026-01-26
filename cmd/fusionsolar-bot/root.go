@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 
 	fusionsolar "fusionsolar-bot"
 
@@ -115,6 +116,7 @@ func initConfig() {
 	viper.BindEnv("sentry-dsn", "SENTRY_DSN")
 	viper.BindEnv("proxy", "SELENIUM_PROXY_SERVER")
 	viper.BindEnv("max-login-retries", "MAX_LOGIN_RETRIES")
+	viper.BindEnv("chromium-path", "CHROMIUM")
 
 	if err := viper.ReadInConfig(); err == nil {
 		fmt.Println("Using config file:", viper.ConfigFileUsed())
@@ -122,6 +124,11 @@ func initConfig() {
 }
 
 func runBot() {
+	destinationsStr := viper.GetString("smtp-destinations")
+	destinations := strings.FieldsFunc(destinationsStr, func(r rune) bool {
+		return r == ',' || r == ' '
+	})
+
 	app := fusionsolar.App{
 		User:             viper.GetString("user"),
 		Password:         viper.GetString("password"),
@@ -129,12 +136,13 @@ func runBot() {
 		SmtpFrom:         viper.GetString("smtp-from"),
 		SmtpPasswd:       viper.GetString("smtp-passwd"),
 		SmtpServer:       viper.GetString("smtp-server"),
-		SmtpDestinations: viper.GetString("smtp-destinations"),
+		SmtpDestinations: destinations,
 		SentryDsn:        viper.GetString("sentry-dsn"),
 		Proxy:            viper.GetString("proxy"),
 		Headless:         headless,
 		Verbose:          verbose,
 		MaxLoginRetries:  viper.GetInt("max-login-retries"),
+		ChromiumPath:     viper.GetString("chromium-path"),
 	}
 
 	if err := app.Run(context.Background()); err != nil {
