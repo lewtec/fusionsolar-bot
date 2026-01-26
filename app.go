@@ -31,12 +31,13 @@ type App struct {
 	SmtpFrom         string
 	SmtpPasswd       string
 	SmtpServer       string
-	SmtpDestinations string
+	SmtpDestinations []string
 	SentryDsn        string
 	Proxy            string
 	Headless         bool
 	Verbose          bool
 	MaxLoginRetries  int
+	ChromiumPath     string
 }
 
 func (a *App) Run(ctx context.Context) error {
@@ -61,7 +62,7 @@ func (a *App) Run(ctx context.Context) error {
 	if a.SmtpServer == "" {
 		missingEmailParams = append(missingEmailParams, "SMTP_SERVER")
 	}
-	if a.SmtpDestinations == "" {
+	if len(a.SmtpDestinations) == 0 {
 		missingEmailParams = append(missingEmailParams, "SMTP_DESTINATIONS")
 	}
 
@@ -127,8 +128,8 @@ func (a *App) setupSentry() {
 func (a *App) setupBrowser() *rod.Browser {
 	l := launcher.New()
 
-	if chromiumPath := os.Getenv("CHROMIUM"); chromiumPath != "" {
-		l.Bin(chromiumPath)
+	if a.ChromiumPath != "" {
+		l.Bin(a.ChromiumPath)
 	} else {
 		// Try to find the browser if env is not set
 		if path, _ := launcher.LookPath(); path != "" {
@@ -317,7 +318,7 @@ func (a *App) sendEmail(subject, body string, attachments []Attachment) {
 
 	m := gomail.NewMessage()
 	m.SetHeader("From", a.SmtpFrom)
-	m.SetHeader("To", strings.Split(a.SmtpDestinations, " ")...)
+	m.SetHeader("To", a.SmtpDestinations...)
 	m.SetHeader("Subject", subject)
 	m.SetBody("text/plain", body)
 
