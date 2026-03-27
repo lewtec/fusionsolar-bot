@@ -22,7 +22,7 @@ runs:
   using: composite
   steps:
     - name: Setup tor for proxying
-      uses: tor-actions/setup-tor@main
+      uses: tor-actions/setup-tor@64121bc84235ab7038224e8ce08601efdb9bd8d9 # main
       with:
         daemon: true
     - name: Get container tag
