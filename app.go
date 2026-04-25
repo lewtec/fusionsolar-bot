@@ -9,7 +9,6 @@ import (
 	"io"
 	"log/slog"
 	"net"
-	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -18,7 +17,6 @@ import (
 	"github.com/go-rod/rod"
 
 	"github.com/go-rod/rod/lib/input"
-	"github.com/go-rod/rod/lib/launcher"
 )
 
 //go:embed version.txt
@@ -33,11 +31,9 @@ type App struct {
 	SmtpServer       string
 	SmtpDestinations []string
 	SentryDsn        string
-	Proxy            string
-	Headless         bool
+	BrowserCDP       string
 	Verbose          bool
 	MaxLoginRetries  int
-	ChromiumPath     string
 }
 
 func sleepContext(ctx context.Context, d time.Duration) {
@@ -82,7 +78,10 @@ func (a *App) Run(ctx context.Context) error {
 	}
 
 	// Setup Browser
-	browser := a.setupBrowser().Context(ctx)
+	browser, err := a.setupBrowser(ctx)
+	if err != nil {
+		return err
+	}
 	defer browser.MustClose()
 
 	// Login
@@ -139,48 +138,18 @@ func (a *App) setupSentry() {
 	}
 }
 
-func (a *App) setupBrowser() *rod.Browser {
-	l := launcher.New()
-
-	if a.ChromiumPath != "" {
-		l.Bin(a.ChromiumPath)
-	} else {
-		// Try to find the browser if env is not set
-		if path, _ := launcher.LookPath(); path != "" {
-			l.Bin(path)
-		} else {
-			// Fallback for alpine
-			if _, err := os.Stat("/usr/bin/chromium-browser"); err == nil {
-				l.Bin("/usr/bin/chromium-browser")
-			}
-		}
+func (a *App) setupBrowser(ctx context.Context) (*rod.Browser, error) {
+	if a.BrowserCDP == "" {
+		return nil, fmt.Errorf("[!] BROWSER_CDP não fornecido")
 	}
 
-	if a.Headless {
-		l = l.Headless(true).
-			Set("disable-gpu").
-			Set("disable-dev-shm-usage").
-			Set("disable-setuid-sandbox").
-			Set("no-sandbox")
-	} else {
-		l = l.Headless(false)
-	}
-
-	if a.Proxy != "" {
-		l = l.Proxy(a.Proxy)
-	}
-
-	l = l.Set("window-size", "1280,720")
-
-	u := l.MustLaunch()
-
-	browser := rod.New().ControlURL(u)
+	browser := rod.New().Context(ctx).ControlURL(a.BrowserCDP)
 
 	if a.Verbose {
 		browser = browser.Trace(true)
 	}
 
-	return browser.MustConnect()
+	return browser, browser.Connect()
 }
 
 func (a *App) loginToFusionSolar(ctx context.Context, browser *rod.Browser) (*rod.Page, error) {
