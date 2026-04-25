@@ -44,9 +44,42 @@ fusionsolar-bot [parametros]
 ### GitHub Actions
 Considerado experimental.
 
-Por algum motivo o sistema não consegue acessar o fusionsolar pelo GitHub Actions. Cheguei a tentar pelo Tor sem muito sucesso.
+Se quiser usar a action do repositório, a forma mais simples é subir um Browserless como *service* no workflow e passar o endpoint CDP para a action.
 
-O workflow, na fase de configurar o sistema que oculta os secrets, acaba mostrando os secrets :facepalm:
+Exemplo:
+
+```yaml
+name: fusionsolar-report
+on:
+  workflow_dispatch:
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    services:
+      browserless:
+        image: browserless/chrome:latest
+        ports:
+          - 3000:3000
+        options: >-
+          --shm-size=1g
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run fusionsolar report
+        uses: lucasew/fusionsolar-bot@vX
+        with:
+          user: ${{ secrets.FUSIONSOLAR_USER }}
+          password: ${{ secrets.FUSIONSOLAR_PASSWORD }}
+          browser_cdp: ws://browserless:3000/devtools/browser/SEU_ID_AQUI
+          smtp_user: ${{ secrets.SMTP_USER }}
+          smtp_passwd: ${{ secrets.SMTP_PASSWD }}
+          smtp_server: ${{ secrets.SMTP_SERVER }}
+          smtp_destinations: ${{ secrets.SMTP_DESTINATIONS }}
+```
+
+O ponto importante é que a action *não* sobe o browser sozinha: ela só recebe o `browser_cdp`. Se você preferir outro backend compatível com CDP, basta trocar o service e a URL.
 
 ## Parâmetros
 Esse projeto faz basicamente duas coisas:
