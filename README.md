@@ -72,7 +72,7 @@ jobs:
         with:
           user: ${{ secrets.FUSIONSOLAR_USER }}
           password: ${{ secrets.FUSIONSOLAR_PASSWORD }}
-          browser_cdp: ws://browserless:3000/devtools/browser/SEU_ID_AQUI
+          browser_cdp: ws://browserless:3000
           smtp_user: ${{ secrets.SMTP_USER }}
           smtp_passwd: ${{ secrets.SMTP_PASSWD }}
           smtp_server: ${{ secrets.SMTP_SERVER }}
