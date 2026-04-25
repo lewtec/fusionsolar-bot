@@ -11,7 +11,7 @@ inputs:
     description: Password for the fusionsolar user
     required: true
   browser_cdp:
-    description: CDP endpoint for the remote browser
+    description: CDP endpoint for an already running remote browser (the action does not start Browserless)
     required: true
   smtp_user:
     description: User for SMTP server to send the email

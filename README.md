@@ -8,7 +8,7 @@ Puxa os dados de produção do dia do Fusion Solar e manda para a lista de e-mai
 Para rodar a versão mais recente diretamente do registro:
 
 ```bash
-docker run -e BROWSER_CDP="ws://browserless:3000/devtools/browser/abc123" ghcr.io/lucasew/fusionsolar-bot:latest [parametros]
+docker run -e BROWSER_CDP="ws://your-cdp-endpoint:9222/devtools/browser/abc123" ghcr.io/lucasew/fusionsolar-bot:latest [parametros]
 ```
 
 Para construir a imagem localmente:
@@ -20,7 +20,7 @@ docker build -t fusionsolar-bot .
 E para rodar a imagem construída localmente:
 
 ```bash
-docker run -e BROWSER_CDP="ws://browserless:3000/devtools/browser/abc123" fusionsolar-bot [parametros]
+docker run -e BROWSER_CDP="ws://your-cdp-endpoint:9222/devtools/browser/abc123" fusionsolar-bot [parametros]
 ```
 
 Nenhum estado desse container precisa ser salvo.
