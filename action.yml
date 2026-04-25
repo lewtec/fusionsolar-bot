@@ -10,6 +10,9 @@ inputs:
   password:
     description: Password for the fusionsolar user
     required: true
+  browser_cdp:
+    description: CDP endpoint for an already running remote browser (the action does not start Browserless)
+    required: true
   smtp_user:
     description: User for SMTP server to send the email
   smtp_passwd:
@@ -21,10 +24,6 @@ inputs:
 runs:
   using: composite
   steps:
-    - name: Setup tor for proxying
-      uses: tor-actions/setup-tor@main
-      with:
-        daemon: true
     - name: Get container tag
       shell: bash
       run: |
@@ -34,6 +33,7 @@ runs:
       run: |
         echo "::add-mask::${{ inputs.user }}"
         echo "::add-mask::${{ inputs.password }}"
+        echo "::add-mask::${{ inputs.browser_cdp }}"
         echo "::add-mask::${{ inputs.smtp_user }}"
         echo "::add-mask::${{ inputs.smtp_passwd }}"
         echo "::add-mask::${{ inputs.smtp_server }}"
@@ -41,11 +41,8 @@ runs:
     - name: Run fusionsolar workflow in one go
       shell: bash
       run: |
-        
         docker run -i \
-          --dns=1.1.1.1 \
-          --net=host \
-          -e SELENIUM_PROXY_SERVER=localhost:9050 \
+          -e BROWSER_CDP="${{ inputs.browser_cdp }}" \
           -e FUSIONSOLAR_USER="${{ inputs.user }}" \
           -e FUSIONSOLAR_PASSWORD="${{ inputs.password }}" \
           -e SMTP_USER="${{ inputs.smtp_user }}" \

@@ -24,8 +24,7 @@ var (
 	smtpServer       string
 	smtpDestinations string
 	sentryDsn        string
-	proxy            string
-	headless         bool
+	browserCDP       string
 	verbose          bool
 	version          bool
 	timeout          time.Duration
@@ -35,7 +34,7 @@ var (
 var rootCmd = &cobra.Command{
 	Use:   "fusionsolar-bot",
 	Short: "FusionSolar data collector",
-	Long:  `A bot to collect data from FusionSolar and send reports via email.`,
+	Long:  `A bot to collect data from FusionSolar and send reports via email using an external CDP browser.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		if version {
 			fmt.Println(fusionsolar.Version)
@@ -65,10 +64,7 @@ func init() {
 	rootCmd.Flags().StringVar(&smtpServer, "smtp-server", "", "SMTP server (format: server:port)")
 	rootCmd.Flags().StringVar(&smtpDestinations, "smtp-destinations", "", "Email recipients (space separated)")
 	rootCmd.Flags().StringVar(&sentryDsn, "sentry-dsn", "", "Sentry DSN for error tracking")
-	rootCmd.Flags().StringVar(&proxy, "proxy", "", "Proxy server for Selenium")
-
-	defaultHeadless := os.Getenv("DISPLAY") == ""
-	rootCmd.Flags().BoolVar(&headless, "headless", defaultHeadless, "Run Chrome in headless mode")
+	rootCmd.Flags().StringVar(&browserCDP, "browser-cdp", "", "CDP endpoint for the browser")
 	rootCmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "Enable verbose logging")
 	rootCmd.Flags().BoolVar(&version, "version", false, "Print version and exit")
 	rootCmd.Flags().DurationVar(&timeout, "timeout", 10*time.Minute, "Maximum total runtime before cancellation")
@@ -86,13 +82,9 @@ func bindFlags() {
 	viper.BindPFlag("smtp-server", rootCmd.Flags().Lookup("smtp-server"))
 	viper.BindPFlag("smtp-destinations", rootCmd.Flags().Lookup("smtp-destinations"))
 	viper.BindPFlag("sentry-dsn", rootCmd.Flags().Lookup("sentry-dsn"))
-	viper.BindPFlag("proxy", rootCmd.Flags().Lookup("proxy"))
 	viper.BindPFlag("timeout", rootCmd.Flags().Lookup("timeout"))
+	viper.BindPFlag("browser-cdp", rootCmd.Flags().Lookup("browser-cdp"))
 	viper.BindPFlag("max-login-retries", rootCmd.Flags().Lookup("max-login-retries"))
-	// Headless and verbose are flags only, usually, but we can bind them if we want env vars support for them too.
-	// The python script didn't seem to use env vars for headless/verbose, but `args = parser.parse_args()` was used.
-	// The python script had `default=os.getenv(...)` for some args.
-	// Cobra+Viper handles this by checking flag -> env -> config -> default.
 }
 
 func initConfig() {
@@ -118,10 +110,9 @@ func initConfig() {
 	viper.BindEnv("smtp-server", "SMTP_SERVER")
 	viper.BindEnv("smtp-destinations", "SMTP_DESTINATIONS")
 	viper.BindEnv("sentry-dsn", "SENTRY_DSN")
-	viper.BindEnv("proxy", "SELENIUM_PROXY_SERVER")
 	viper.BindEnv("timeout", "TIMEOUT")
+	viper.BindEnv("browser-cdp", "BROWSER_CDP")
 	viper.BindEnv("max-login-retries", "MAX_LOGIN_RETRIES")
-	viper.BindEnv("chromium-path", "CHROMIUM")
 
 	if err := viper.ReadInConfig(); err == nil {
 		fmt.Println("Using config file:", viper.ConfigFileUsed())
@@ -150,11 +141,9 @@ func runBot() {
 		SmtpServer:       viper.GetString("smtp-server"),
 		SmtpDestinations: destinations,
 		SentryDsn:        viper.GetString("sentry-dsn"),
-		Proxy:            viper.GetString("proxy"),
-		Headless:         headless,
+		BrowserCDP:       viper.GetString("browser-cdp"),
 		Verbose:          verbose,
 		MaxLoginRetries:  viper.GetInt("max-login-retries"),
-		ChromiumPath:     viper.GetString("chromium-path"),
 	}
 
 	if err := app.Run(ctx); err != nil {
