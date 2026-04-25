@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"strings"
+	"time"
 
 	fusionsolar "fusionsolar-bot"
 
@@ -27,6 +28,7 @@ var (
 	headless         bool
 	verbose          bool
 	version          bool
+	timeout          time.Duration
 	maxLoginRetries  int
 )
 
@@ -69,6 +71,7 @@ func init() {
 	rootCmd.Flags().BoolVar(&headless, "headless", defaultHeadless, "Run Chrome in headless mode")
 	rootCmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "Enable verbose logging")
 	rootCmd.Flags().BoolVar(&version, "version", false, "Print version and exit")
+	rootCmd.Flags().DurationVar(&timeout, "timeout", 10*time.Minute, "Maximum total runtime before cancellation")
 	rootCmd.Flags().IntVar(&maxLoginRetries, "max-login-retries", 5, "Maximum number of login retries")
 
 	bindFlags()
@@ -84,6 +87,7 @@ func bindFlags() {
 	viper.BindPFlag("smtp-destinations", rootCmd.Flags().Lookup("smtp-destinations"))
 	viper.BindPFlag("sentry-dsn", rootCmd.Flags().Lookup("sentry-dsn"))
 	viper.BindPFlag("proxy", rootCmd.Flags().Lookup("proxy"))
+	viper.BindPFlag("timeout", rootCmd.Flags().Lookup("timeout"))
 	viper.BindPFlag("max-login-retries", rootCmd.Flags().Lookup("max-login-retries"))
 	// Headless and verbose are flags only, usually, but we can bind them if we want env vars support for them too.
 	// The python script didn't seem to use env vars for headless/verbose, but `args = parser.parse_args()` was used.
@@ -115,6 +119,7 @@ func initConfig() {
 	viper.BindEnv("smtp-destinations", "SMTP_DESTINATIONS")
 	viper.BindEnv("sentry-dsn", "SENTRY_DSN")
 	viper.BindEnv("proxy", "SELENIUM_PROXY_SERVER")
+	viper.BindEnv("timeout", "TIMEOUT")
 	viper.BindEnv("max-login-retries", "MAX_LOGIN_RETRIES")
 	viper.BindEnv("chromium-path", "CHROMIUM")
 
@@ -124,6 +129,13 @@ func initConfig() {
 }
 
 func runBot() {
+	runTimeout := viper.GetDuration("timeout")
+	if runTimeout <= 0 {
+		runTimeout = 10 * time.Minute
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), runTimeout)
+	defer cancel()
+
 	destinationsStr := viper.GetString("smtp-destinations")
 	destinations := strings.FieldsFunc(destinationsStr, func(r rune) bool {
 		return r == ',' || r == ' '
@@ -145,7 +157,7 @@ func runBot() {
 		ChromiumPath:     viper.GetString("chromium-path"),
 	}
 
-	if err := app.Run(context.Background()); err != nil {
+	if err := app.Run(ctx); err != nil {
 		log.Fatal(err)
 	}
 }

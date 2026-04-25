@@ -40,6 +40,16 @@ type App struct {
 	ChromiumPath     string
 }
 
+func sleepContext(ctx context.Context, d time.Duration) {
+	timer := time.NewTimer(d)
+	defer timer.Stop()
+
+	select {
+	case <-ctx.Done():
+	case <-timer.C:
+	}
+}
+
 func (a *App) Run(ctx context.Context) error {
 	// Setup Sentry
 	a.setupSentry()
@@ -76,21 +86,25 @@ func (a *App) Run(ctx context.Context) error {
 	defer browser.MustClose()
 
 	// Login
-	page, err := a.loginToFusionSolar(browser)
+	page, err := a.loginToFusionSolar(ctx, browser)
 	if err != nil {
 		sentry.CaptureException(err)
 		return err
 	}
 
 	// Get Stations
-	stationsData, err := a.getStations(page)
+	stationsData, err := a.getStations(ctx, page)
 	if err != nil {
 		sentry.CaptureException(err)
 		return err
 	}
 
 	// Collect Data
-	emailBody, attachments := a.collectStationData(page, stationsData)
+	emailBody, attachments, err := a.collectStationData(ctx, page, stationsData)
+	if err != nil {
+		sentry.CaptureException(err)
+		return err
+	}
 
 	fmt.Println(emailBody)
 
@@ -169,20 +183,26 @@ func (a *App) setupBrowser() *rod.Browser {
 	return browser.MustConnect()
 }
 
-func (a *App) loginToFusionSolar(browser *rod.Browser) (*rod.Page, error) {
+func (a *App) loginToFusionSolar(ctx context.Context, browser *rod.Browser) (*rod.Page, error) {
 	for i := 0; i < a.MaxLoginRetries; i++ {
 		slog.Info(fmt.Sprintf("[*] Login attempt %d/%d", i+1, a.MaxLoginRetries))
 		page := browser.MustPage("https://intl.fusionsolar.huawei.com/pvmswebsite/login/build/index.html#/LOGIN")
 
 		page.MustWaitLoad()
-		time.Sleep(5 * time.Second)
+		sleepContext(ctx, 5*time.Second)
+		if err := ctx.Err(); err != nil {
+			return nil, err
+		}
 
 		page.MustElement("div#username input").MustInput(a.User)
 		passwordInput := page.MustElement("div#password input")
 		passwordInput.MustInput(a.Password)
 		passwordInput.MustType(input.Enter)
 
-		time.Sleep(10 * time.Second)
+		sleepContext(ctx, 10*time.Second)
+		if err := ctx.Err(); err != nil {
+			return nil, err
+		}
 
 		// Handle cookie dialog
 		cookieButtons := page.MustElements("i.cookiePolicy-icon")
@@ -200,9 +220,15 @@ func (a *App) loginToFusionSolar(browser *rod.Browser) (*rod.Page, error) {
 
 			approveBtn, err := modal.Element("button.dpdesign-btn-primary")
 			if err == nil {
-				time.Sleep(1 * time.Second)
+				sleepContext(ctx, 1*time.Second)
+				if err := ctx.Err(); err != nil {
+					return nil, err
+				}
 				approveBtn.MustClick()
-				time.Sleep(10 * time.Second)
+				sleepContext(ctx, 10*time.Second)
+				if err := ctx.Err(); err != nil {
+					return nil, err
+				}
 			}
 		}
 
@@ -221,7 +247,7 @@ type StationData struct {
 	Name string
 }
 
-func (a *App) getStations(page *rod.Page) ([]StationData, error) {
+func (a *App) getStations(ctx context.Context, page *rod.Page) ([]StationData, error) {
 	maxAttempts := 5
 	attempts := 0
 	var stationsData []StationData
@@ -229,7 +255,10 @@ func (a *App) getStations(page *rod.Page) ([]StationData, error) {
 	for len(stationsData) == 0 && attempts < maxAttempts {
 		slog.Info("[*] Acessando homepage")
 		page.MustNavigate("https://intl.fusionsolar.huawei.com")
-		time.Sleep(10 * time.Second)
+		sleepContext(ctx, 10*time.Second)
+		if err := ctx.Err(); err != nil {
+			return nil, err
+		}
 
 		slog.Info("[*] Tentando listar estações")
 		stations, err := page.Elements("a.nco-home-list-text-ellipsis")
@@ -263,7 +292,7 @@ type Attachment struct {
 	Content []byte
 }
 
-func (a *App) collectStationData(page *rod.Page, stationsData []StationData) (string, []Attachment) {
+func (a *App) collectStationData(ctx context.Context, page *rod.Page, stationsData []StationData) (string, []Attachment, error) {
 	var emailBody strings.Builder
 	emailBody.WriteString("Quantidade de energia produzida em cada base\n\n")
 	var attachments []Attachment
@@ -271,7 +300,10 @@ func (a *App) collectStationData(page *rod.Page, stationsData []StationData) (st
 	for _, station := range stationsData {
 		slog.Info(fmt.Sprintf("[*] Coletando dados da estação \"%s\"", station.Name))
 		page.MustNavigate(station.URL)
-		time.Sleep(10 * time.Second)
+		sleepContext(ctx, 10*time.Second)
+		if err := ctx.Err(); err != nil {
+			return emailBody.String(), attachments, err
+		}
 
 		// Get canvas chart
 		canvas := page.MustElement(".nco-single-energy-body canvas")
@@ -310,7 +342,7 @@ func (a *App) collectStationData(page *rod.Page, stationsData []StationData) (st
 	fmt.Fprintf(&emailBody, "\nOs gráficos de geração estão em anexo.\n\n")
 	fmt.Fprintf(&emailBody, "Dados obtidos em: %s\n", time.Now().Format("2006-01-02 15:04:05"))
 
-	return emailBody.String(), attachments
+	return emailBody.String(), attachments, nil
 }
 
 func (a *App) sendEmail(subject, body string, attachments []Attachment) {
