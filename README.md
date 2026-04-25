@@ -66,6 +66,7 @@ Parâmetros no formato `flag` / `variável de ambiente`.
 - `--smtp-destinations` / `SMTP_DESTINATIONS`: lista de e-mails para enviar os resultados separada por espaço
 - `--sentry-dsn` / `SENTRY_DSN`: DSN do Sentry para monitoramento de erros
 - `--proxy` / `SELENIUM_PROXY_SERVER`: servidor proxy para o Selenium
+- `--timeout` / `TIMEOUT`: tempo máximo total de execução antes de cancelar o trabalho, padrão: 10 minutos
 - `--headless` (apenas flag): rodar o navegador em modo headless (sem interface gráfica), padrão em containers
 - `--verbose` (apenas flag): dar mais detalhes sobre o que está acontecendo, bom para debug
 - `--version`: exibe a versão do programa
