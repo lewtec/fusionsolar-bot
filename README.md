@@ -41,12 +41,16 @@ go install ./cmd/fusionsolar-bot
 fusionsolar-bot [parametros]
 ```
 
-### GitHub Actions
+### Browserless / CDP
 Considerado experimental.
 
-Se quiser usar a action do repositório, a forma mais simples é subir um Browserless como *service* no workflow e passar o endpoint CDP para a action.
+Quando a aplicação usa Browserless como navegador remoto, a sessão pode expirar no meio da coleta de uma estação. O `timeout` do Browserless é em *milissegundos*; se precisar aumentar o tempo, passe o query param na URL CDP, por exemplo:
 
-Exemplo:
+```text
+wss://browserless:3000?timeout=120000
+```
+
+O problema observado aqui não é o GitHub Actions em si, e sim a sessão do browser remoto sendo encerrada antes de terminar a coleta.
 
 ```yaml
 name: fusionsolar-report
@@ -72,7 +76,7 @@ jobs:
         with:
           user: ${{ secrets.FUSIONSOLAR_USER }}
           password: ${{ secrets.FUSIONSOLAR_PASSWORD }}
-          browser_cdp: ws://browserless:3000/devtools/browser/SEU_ID_AQUI
+          browser_cdp: ws://browserless:3000
           smtp_user: ${{ secrets.SMTP_USER }}
           smtp_passwd: ${{ secrets.SMTP_PASSWD }}
           smtp_server: ${{ secrets.SMTP_SERVER }}
