@@ -1,0 +1,1 @@
+- 2024-05-01: [Medium: Ignored/swallowed errors] Added a centralized ReportError function to funnel all unexpected errors and capture them in Sentry instead of sporadically using slog.Error or sentry.CaptureException at call sites.
