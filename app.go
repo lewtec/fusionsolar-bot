@@ -22,6 +22,9 @@ import (
 //go:embed version.txt
 var Version string
 
+// App encapsulates the configuration and state required to run the FusionSolar data
+// collection pipeline. It relies on an external Chrome DevTools Protocol (CDP) compatible
+// browser for rendering dynamic pages and handling complex UI elements like charts.
 type App struct {
 	User             string
 	Password         string
@@ -46,6 +49,9 @@ func sleepContext(ctx context.Context, d time.Duration) {
 	}
 }
 
+// Run executes the main end-to-end workflow: browser initialization, login, station
+// discovery, data extraction, and optional email reporting. It respects the provided
+// context for timeouts and cancellation.
 func (a *App) Run(ctx context.Context) error {
 	// Setup Sentry
 	a.setupSentry()
@@ -152,6 +158,9 @@ func (a *App) setupBrowser(ctx context.Context) (*rod.Browser, error) {
 	return browser, browser.Connect()
 }
 
+// loginToFusionSolar navigates to the login page and attempts to authenticate.
+// It includes specific logic to detect and bypass recurring UI obstacles such as
+// cookie consent dialogs and privacy policy modals that frequently block automation.
 func (a *App) loginToFusionSolar(ctx context.Context, browser *rod.Browser) (*rod.Page, error) {
 	for i := 0; i < a.MaxLoginRetries; i++ {
 		slog.Info(fmt.Sprintf("[*] Login attempt %d/%d", i+1, a.MaxLoginRetries))
@@ -216,6 +225,9 @@ type StationData struct {
 	Name string
 }
 
+// getStations parses the homepage to extract a list of all available solar stations.
+// It iterates up to a maximum number of attempts since the station list might be rendered
+// asynchronously after the initial page load.
 func (a *App) getStations(ctx context.Context, page *rod.Page) ([]StationData, error) {
 	maxAttempts := 5
 	attempts := 0
@@ -261,6 +273,10 @@ type Attachment struct {
 	Content []byte
 }
 
+// collectStationData visits each station's dashboard to gather metrics.
+// It retrieves the energy production text and critically extracts the generation chart
+// by evaluating a JavaScript snippet to convert the HTML5 Canvas directly into a Base64
+// PNG image, which is then decoded for email attachment.
 func (a *App) collectStationData(ctx context.Context, page *rod.Page, stationsData []StationData) (string, []Attachment, error) {
 	var emailBody strings.Builder
 	emailBody.WriteString("Quantidade de energia produzida em cada base\n\n")
