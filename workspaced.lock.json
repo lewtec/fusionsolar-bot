@@ -1,0 +1,22 @@
+{
+  "dependencies": [
+    {
+      "kind": "tool",
+      "name": "actionlint",
+      "ref": "github:rhysd/actionlint",
+      "version": "v1.7.12"
+    },
+    {
+      "kind": "tool",
+      "name": "golangci_lint",
+      "ref": "github:golangci/golangci-lint",
+      "version": "v2.12.0"
+    },
+    {
+      "kind": "tool",
+      "name": "shellcheck",
+      "ref": "github:koalaman/shellcheck",
+      "version": "v0.11.0"
+    }
+  ]
+}

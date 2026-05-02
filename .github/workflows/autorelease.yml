@@ -47,9 +47,33 @@ jobs:
     - name: Install mise
       uses: jdx/mise-action@6d1e696aa24c1aa1bcc1adea0212707c71ab78a8 # v3
 
-    - name: Try to build it
+    - name: Install dependencies
+      run: mise run install
+
+    - name: Codegen
+      run: mise run codegen
+
+    - name: PR if Difference
       run: |
-        go build ./cmd/fusionsolar-bot
+        if [[ -n $(git status --porcelain) ]]; then
+          git config user.name "actions-bot"
+          git config user.email "actions-bot@users.noreply.github.com"
+          git checkout -b auto-codegen-${GITHUB_SHA}
+          git add -A
+          git commit -m "chore: auto update codegen"
+          git config --global push.autoSetupRemote true
+          git remote add github "https://${GITHUB_ACTOR}:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" || true
+          git fetch github
+          git branch --set-upstream-to=github/main
+          git checkout auto-codegen-${GITHUB_SHA}
+          git push origin auto-codegen-${GITHUB_SHA}
+          gh pr create --title "chore: auto update codegen" --body "Automated codegen update" --head auto-codegen-${GITHUB_SHA} --base main
+        fi
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: CI
+      run: mise run ci
 
     - name: Make release if everything looks right
       if: github.event_name != 'pull_request'
