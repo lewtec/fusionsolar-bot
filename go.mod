@@ -1,11 +1,11 @@
 module fusionsolar-bot
 
-go 1.23.0
+go 1.25.0
 
 toolchain go1.25.6
 
 require (
-	github.com/getsentry/sentry-go v0.40.0
+	github.com/getsentry/sentry-go v0.46.2
 	github.com/go-rod/rod v0.116.2
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/viper v1.21.0
