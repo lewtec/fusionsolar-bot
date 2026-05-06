@@ -87,21 +87,21 @@ func (a *App) Run(ctx context.Context) error {
 	// Login
 	page, err := a.loginToFusionSolar(ctx, browser)
 	if err != nil {
-		sentry.CaptureException(err)
+		ReportError("Login failed", err)
 		return err
 	}
 
 	// Get Stations
 	stationsData, err := a.getStations(ctx, page)
 	if err != nil {
-		sentry.CaptureException(err)
+		ReportError("Failed to get stations", err)
 		return err
 	}
 
 	// Collect Data
 	emailBody, attachments, err := a.collectStationData(ctx, page, stationsData)
 	if err != nil {
-		sentry.CaptureException(err)
+		ReportError("Failed to collect station data", err)
 		return err
 	}
 
@@ -134,7 +134,7 @@ func (a *App) setupSentry() {
 		TracesSampleRate: 1.0,
 	})
 	if err != nil {
-		slog.Error("Sentry initialization failed", "error", err)
+		ReportError("Sentry initialization failed", err)
 	}
 }
 
@@ -278,7 +278,7 @@ func (a *App) collectStationData(ctx context.Context, page *rod.Page, stationsDa
 		canvas := page.MustElement(".nco-single-energy-body canvas")
 		res, err := canvas.Eval(`function() { return this.toDataURL('image/png') }`)
 		if err != nil {
-			slog.Error("Error getting canvas data", "error", err)
+			ReportError("Error getting canvas data", err)
 			continue
 		}
 		dataURL := res.Value.Str()
@@ -286,7 +286,7 @@ func (a *App) collectStationData(ctx context.Context, page *rod.Page, stationsDa
 
 		imgBytes, err := base64.StdEncoding.DecodeString(b64)
 		if err != nil {
-			slog.Error("Error decoding base64 image", "station", station.Name, "error", err)
+			ReportError("Error decoding base64 image", err, "station", station.Name)
 			continue
 		}
 		attachments = append(attachments, Attachment{
@@ -300,7 +300,7 @@ func (a *App) collectStationData(ctx context.Context, page *rod.Page, stationsDa
 		valText = strings.ReplaceAll(valText, ",", ".")
 		amountProduced, err := strconv.ParseFloat(valText, 64)
 		if err != nil {
-			slog.Error("Error parsing production amount", "station", station.Name, "error", err, "value", valText)
+			ReportError("Error parsing production amount", err, "station", station.Name, "value", valText)
 			fmt.Fprintf(&emailBody, "%s: Falha ao obter dados\n", station.Name)
 		} else {
 			fmt.Fprintf(&emailBody, "%s: %vkWh\n", station.Name, amountProduced)
@@ -338,13 +338,13 @@ func (a *App) sendEmail(subject, body string, attachments []Attachment) {
 	}
 	port, err := strconv.Atoi(portStr)
 	if err != nil {
-		slog.Error("invalid smtp port", "error", err)
+		ReportError("invalid smtp port", err)
 		return
 	}
 
 	d := gomail.NewDialer(host, port, a.SmtpUser, a.SmtpPasswd)
 
 	if err := d.DialAndSend(m); err != nil {
-		slog.Error("Error sending email", "error", err)
+		ReportError("Error sending email", err)
 	}
 }
