@@ -152,6 +152,11 @@ func (a *App) setupBrowser(ctx context.Context) (*rod.Browser, error) {
 	return browser, browser.Connect()
 }
 
+// loginToFusionSolar navigates to the FusionSolar login page, enters credentials,
+// and dynamically handles common UI modals such as cookie policies and privacy agreements.
+// It incorporates a retry mechanism bound by MaxLoginRetries to mitigate intermittent
+// network instability or slow SPA rendering. It yields a logged-in rod.Page or an
+// error if all retries are exhausted.
 func (a *App) loginToFusionSolar(ctx context.Context, browser *rod.Browser) (*rod.Page, error) {
 	for i := 0; i < a.MaxLoginRetries; i++ {
 		slog.Info("[*] Login attempt", "attempt", i+1, "maxRetries", a.MaxLoginRetries)
@@ -216,6 +221,10 @@ type StationData struct {
 	Name string
 }
 
+// getStations navigates to the logged-in homepage and scrapes DOM elements
+// to compile a list of available solar stations. It features a built-in retry
+// mechanism (up to 5 attempts) to account for the page's SPA architecture,
+// which may delay rendering the stations list.
 func (a *App) getStations(ctx context.Context, page *rod.Page) ([]StationData, error) {
 	maxAttempts := 5
 	attempts := 0
@@ -262,6 +271,10 @@ type Attachment struct {
 	Content []byte
 }
 
+// collectStationData iterates over the provided stations to extract power generation data
+// and export the frontend charting canvas as a base64-encoded PNG screenshot. It fails
+// gracefully per station if parsing errors occur (such as image decoding or float parsing),
+// accumulating results rather than aborting the entire collection process.
 func (a *App) collectStationData(ctx context.Context, page *rod.Page, stationsData []StationData) (string, []Attachment, error) {
 	var emailBody strings.Builder
 	emailBody.WriteString("Quantidade de energia produzida em cada base\n\n")
