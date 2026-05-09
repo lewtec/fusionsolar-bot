@@ -74,7 +74,7 @@ func (a *App) Run(ctx context.Context) error {
 
 	emailEnabled := len(missingEmailParams) == 0
 	if !emailEnabled {
-		slog.Warn(fmt.Sprintf("[!] Funcionalidade de email desativada. Motivo: Variáveis de ambiente/flags faltando: %s", strings.Join(missingEmailParams, ", ")))
+		slog.Warn("[!] Funcionalidade de email desativada", "motivo", "Variáveis de ambiente/flags faltando", "missing", strings.Join(missingEmailParams, ", "))
 	}
 
 	// Setup Browser
@@ -87,21 +87,21 @@ func (a *App) Run(ctx context.Context) error {
 	// Login
 	page, err := a.loginToFusionSolar(ctx, browser)
 	if err != nil {
-		sentry.CaptureException(err)
+		ReportError("Failed to login to FusionSolar", err)
 		return err
 	}
 
 	// Get Stations
 	stationsData, err := a.getStations(ctx, page)
 	if err != nil {
-		sentry.CaptureException(err)
+		ReportError("Failed to get stations", err)
 		return err
 	}
 
 	// Collect Data
 	emailBody, attachments, err := a.collectStationData(ctx, page, stationsData)
 	if err != nil {
-		sentry.CaptureException(err)
+		ReportError("Failed to collect station data", err)
 		return err
 	}
 
@@ -134,7 +134,7 @@ func (a *App) setupSentry() {
 		TracesSampleRate: 1.0,
 	})
 	if err != nil {
-		slog.Error("Sentry initialization failed", "error", err)
+		ReportError("Sentry initialization failed", err)
 	}
 }
 
@@ -154,7 +154,7 @@ func (a *App) setupBrowser(ctx context.Context) (*rod.Browser, error) {
 
 func (a *App) loginToFusionSolar(ctx context.Context, browser *rod.Browser) (*rod.Page, error) {
 	for i := 0; i < a.MaxLoginRetries; i++ {
-		slog.Info(fmt.Sprintf("[*] Login attempt %d/%d", i+1, a.MaxLoginRetries))
+		slog.Info("[*] Login attempt", "attempt", i+1, "maxRetries", a.MaxLoginRetries)
 		page := browser.MustPage("https://intl.fusionsolar.huawei.com/pvmswebsite/login/build/index.html#/LOGIN")
 
 		page.MustWaitLoad()
@@ -233,12 +233,13 @@ func (a *App) getStations(ctx context.Context, page *rod.Page) ([]StationData, e
 		stations, err := page.Elements("a.nco-home-list-text-ellipsis")
 		if err != nil || len(stations) == 0 {
 			attempts++
-			slog.Info(fmt.Sprintf("[*] Tentativa %d/%d: Zero estações encontradas", attempts, maxAttempts))
-			slog.Info(fmt.Sprintf("[*] URL atual: %s", page.MustInfo().URL))
+			slog.Info("[*] Zero estações encontradas", "attempt", attempts, "maxAttempts", maxAttempts)
+			slog.Info("[*] URL atual", "url", page.MustInfo().URL)
 			if attempts >= maxAttempts {
-				slog.Error("[*] Sem estações, desistindo...")
+				err := fmt.Errorf("failed to find stations after %d attempts", maxAttempts)
+				ReportError("[*] Sem estações, desistindo...", err)
 				// We don't exit here anymore, return empty or error
-				return nil, fmt.Errorf("failed to find stations after %d attempts", maxAttempts)
+				return nil, err
 			}
 		} else {
 			for _, station := range stations {
@@ -248,7 +249,7 @@ func (a *App) getStations(ctx context.Context, page *rod.Page) ([]StationData, e
 					URL:  href,
 					Name: name,
 				}
-				slog.Info(fmt.Sprintf("%v", sData))
+				slog.Info("[*] Estação encontrada", "name", sData.Name, "url", sData.URL)
 				stationsData = append(stationsData, sData)
 			}
 		}
@@ -267,7 +268,7 @@ func (a *App) collectStationData(ctx context.Context, page *rod.Page, stationsDa
 	var attachments []Attachment
 
 	for _, station := range stationsData {
-		slog.Info(fmt.Sprintf("[*] Coletando dados da estação \"%s\"", station.Name))
+		slog.Info("[*] Coletando dados da estação", "station", station.Name)
 		page.MustNavigate(station.URL)
 		sleepContext(ctx, 10*time.Second)
 		if err := ctx.Err(); err != nil {
@@ -278,7 +279,7 @@ func (a *App) collectStationData(ctx context.Context, page *rod.Page, stationsDa
 		canvas := page.MustElement(".nco-single-energy-body canvas")
 		res, err := canvas.Eval(`function() { return this.toDataURL('image/png') }`)
 		if err != nil {
-			slog.Error("Error getting canvas data", "error", err)
+			ReportError("Error getting canvas data", err)
 			continue
 		}
 		dataURL := res.Value.Str()
@@ -286,7 +287,7 @@ func (a *App) collectStationData(ctx context.Context, page *rod.Page, stationsDa
 
 		imgBytes, err := base64.StdEncoding.DecodeString(b64)
 		if err != nil {
-			slog.Error("Error decoding base64 image", "station", station.Name, "error", err)
+			ReportError("Error decoding base64 image", err, "station", station.Name)
 			continue
 		}
 		attachments = append(attachments, Attachment{
@@ -300,11 +301,11 @@ func (a *App) collectStationData(ctx context.Context, page *rod.Page, stationsDa
 		valText = strings.ReplaceAll(valText, ",", ".")
 		amountProduced, err := strconv.ParseFloat(valText, 64)
 		if err != nil {
-			slog.Error("Error parsing production amount", "station", station.Name, "error", err, "value", valText)
+			ReportError("Error parsing production amount", err, "station", station.Name, "value", valText)
 			fmt.Fprintf(&emailBody, "%s: Falha ao obter dados\n", station.Name)
 		} else {
 			fmt.Fprintf(&emailBody, "%s: %vkWh\n", station.Name, amountProduced)
-			slog.Info(fmt.Sprintf("[*] Produzido hoje: %vkWh", amountProduced))
+			slog.Info("[*] Produzido hoje", "amount_kWh", amountProduced, "station", station.Name)
 		}
 	}
 
@@ -338,13 +339,13 @@ func (a *App) sendEmail(subject, body string, attachments []Attachment) {
 	}
 	port, err := strconv.Atoi(portStr)
 	if err != nil {
-		slog.Error("invalid smtp port", "error", err)
+		ReportError("invalid smtp port", err)
 		return
 	}
 
 	d := gomail.NewDialer(host, port, a.SmtpUser, a.SmtpPasswd)
 
 	if err := d.DialAndSend(m); err != nil {
-		slog.Error("Error sending email", "error", err)
+		ReportError("Error sending email", err)
 	}
 }
