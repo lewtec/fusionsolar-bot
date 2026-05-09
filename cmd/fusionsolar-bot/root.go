@@ -31,8 +31,6 @@ var (
 	maxLoginRetries  int
 )
 
-// rootCmd represents the base command when called without any subcommands.
-// It initializes the CLI and controls the execution flow of the application.
 var rootCmd = &cobra.Command{
 	Use:   "fusionsolar-bot",
 	Short: "FusionSolar data collector",
@@ -46,9 +44,6 @@ var rootCmd = &cobra.Command{
 	},
 }
 
-// Execute adds all child commands to the root command and sets flags appropriately.
-// It is the main entry point called by main.go, executing the root command
-// and exiting the application if an error occurs during execution.
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)
@@ -56,9 +51,6 @@ func Execute() {
 	}
 }
 
-// init registers global configurations and CLI flags with Cobra.
-// It uses cobra.OnInitialize to defer the Viper configuration binding
-// until after the flags have been parsed, ensuring env vars and flags combine correctly.
 func init() {
 	cobra.OnInitialize(initConfig)
 
@@ -81,10 +73,6 @@ func init() {
 	bindFlags()
 }
 
-// bindFlags explicitly binds Cobra CLI flags to Viper configuration keys.
-// This synchronization is necessary so that Viper can act as a unified
-// source of truth, regardless of whether a value came from a flag, an env var,
-// or a config file.
 func bindFlags() {
 	viper.BindPFlag("user", rootCmd.Flags().Lookup("user"))
 	viper.BindPFlag("password", rootCmd.Flags().Lookup("password"))
@@ -99,10 +87,6 @@ func bindFlags() {
 	viper.BindPFlag("max-login-retries", rootCmd.Flags().Lookup("max-login-retries"))
 }
 
-// initConfig reads in configuration settings from a config file and environment variables.
-// It maps specific FUSIONSOLAR_* and SMTP_* environment variables into Viper,
-// enabling users to configure the application seamlessly in containerized setups (like Docker)
-// without needing CLI flags.
 func initConfig() {
 	if cfgFile != "" {
 		viper.SetConfigFile(cfgFile)
@@ -135,10 +119,6 @@ func initConfig() {
 	}
 }
 
-// runBot sets up the execution context and initializes the core application logic.
-// It extracts all configuration values from Viper, parsing arrays like destinations,
-// maps them into the fusionsolar.App struct, and triggers the main data collection flow
-// with a bound timeout to prevent indefinite hangs during browser interactions.
 func runBot() {
 	runTimeout := viper.GetDuration("timeout")
 	if runTimeout <= 0 {
