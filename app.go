@@ -22,6 +22,9 @@ import (
 //go:embed version.txt
 var Version string
 
+// App serves as the central state container for the application.
+// It holds all configuration injected by the CLI layer (such as credentials,
+// SMTP settings, and environment feature flags) and coordinates the top-level execution logic.
 type App struct {
 	User             string
 	Password         string
@@ -36,6 +39,9 @@ type App struct {
 	MaxLoginRetries  int
 }
 
+// sleepContext provides a context-aware sleep mechanism.
+// It pauses the current goroutine for duration d, but will return early
+// if the context ctx is canceled, preventing goroutine leaks during shutdown or timeouts.
 func sleepContext(ctx context.Context, d time.Duration) {
 	timer := time.NewTimer(d)
 	defer timer.Stop()
@@ -46,6 +52,9 @@ func sleepContext(ctx context.Context, d time.Duration) {
 	}
 }
 
+// Run encapsulates the high-level orchestration workflow of the bot.
+// It initializes services (Sentry, Browser), performs login, gathers stations,
+// collects the generated data, and coordinates the dispatch of the final email report.
 func (a *App) Run(ctx context.Context) error {
 	// Setup Sentry
 	a.setupSentry()
@@ -123,6 +132,9 @@ func (a *App) Run(ctx context.Context) error {
 	return nil
 }
 
+// setupSentry initializes the Sentry client for error tracking.
+// If the Sentry DSN is missing, it logs a warning and exits early.
+// It handles unexpected panics and flushes events during the shutdown phase.
 func (a *App) setupSentry() {
 	if a.SentryDsn == "" {
 		slog.Warn("[!] Sentry: DSN não especificado. Variável de ambiente/flag faltando: SENTRY_DSN")
@@ -138,6 +150,9 @@ func (a *App) setupSentry() {
 	}
 }
 
+// setupBrowser connects to the external Chrome DevTools Protocol (CDP) endpoint.
+// It configures rod.Browser to communicate with an external Chromium instance,
+// binding the connection lifecycle to the provided context.
 func (a *App) setupBrowser(ctx context.Context) (*rod.Browser, error) {
 	if a.BrowserCDP == "" {
 		return nil, fmt.Errorf("[!] BROWSER_CDP não fornecido")
@@ -216,6 +231,8 @@ func (a *App) loginToFusionSolar(ctx context.Context, browser *rod.Browser) (*ro
 	return nil, fmt.Errorf("failed to login after %d attempts", a.MaxLoginRetries)
 }
 
+// StationData represents a single solar station scraped from the dashboard.
+// It holds the station's human-readable name and its direct URL for data extraction.
 type StationData struct {
 	URL  string
 	Name string
@@ -266,6 +283,8 @@ func (a *App) getStations(ctx context.Context, page *rod.Page) ([]StationData, e
 	return stationsData, nil
 }
 
+// Attachment holds an in-memory file destined to be sent via email.
+// It wraps a filename and raw bytes (e.g., base64-decoded PNG chart data).
 type Attachment struct {
 	Name    string
 	Content []byte
@@ -328,6 +347,9 @@ func (a *App) collectStationData(ctx context.Context, page *rod.Page, stationsDa
 	return emailBody.String(), attachments, nil
 }
 
+// sendEmail formats and dispatches the final station report via SMTP.
+// It attaches all generated screenshots and sends the message to the configured destinations.
+// Errors during the send operation are reported centrally rather than halting execution.
 func (a *App) sendEmail(subject, body string, attachments []Attachment) {
 	slog.Info("[*] Enviando emails")
 
