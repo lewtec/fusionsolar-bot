@@ -19,9 +19,14 @@ import (
 	"github.com/go-rod/rod/lib/input"
 )
 
+// Version holds the application version dynamically injected from version.txt at build time.
+//
 //go:embed version.txt
 var Version string
 
+// App encapsulates the entire state and configuration required to run the bot.
+// It acts as the central dependency container, populated via CLI flags and environment variables,
+// avoiding direct access to global environment state during execution.
 type App struct {
 	User             string
 	Password         string
@@ -36,6 +41,9 @@ type App struct {
 	MaxLoginRetries  int
 }
 
+// sleepContext acts as an interruptible time.Sleep, allowing long waits
+// (e.g., waiting for SPA rendering) to be aborted immediately if the overall
+// context is cancelled or times out, preventing goroutine leaks.
 func sleepContext(ctx context.Context, d time.Duration) {
 	timer := time.NewTimer(d)
 	defer timer.Stop()
@@ -46,6 +54,10 @@ func sleepContext(ctx context.Context, d time.Duration) {
 	}
 }
 
+// Run is the primary execution orchestrator for the bot lifecycle.
+// It initializes global integrations (Sentry, Browser), performs the main
+// web scraping workflow (Login -> Find Stations -> Collect Data), and
+// dispatches the final email report. It stops gracefully on context cancellation.
 func (a *App) Run(ctx context.Context) error {
 	// Setup Sentry
 	a.setupSentry()
@@ -123,6 +135,9 @@ func (a *App) Run(ctx context.Context) error {
 	return nil
 }
 
+// setupSentry attempts to initialize the global Sentry client if a valid DSN
+// is provided. It fails gracefully with a warning log if missing, allowing
+// the core application to continue running without remote error telemetry.
 func (a *App) setupSentry() {
 	if a.SentryDsn == "" {
 		slog.Warn("[!] Sentry: DSN não especificado. Variável de ambiente/flag faltando: SENTRY_DSN")
@@ -138,6 +153,9 @@ func (a *App) setupSentry() {
 	}
 }
 
+// setupBrowser initializes a go-rod Browser instance connected to an external
+// Chromium debugger endpoint (CDP) and binds it to the provided execution context.
+// It fails if BROWSER_CDP is empty, enforcing reliance on an external browser service.
 func (a *App) setupBrowser(ctx context.Context) (*rod.Browser, error) {
 	if a.BrowserCDP == "" {
 		return nil, fmt.Errorf("[!] BROWSER_CDP não fornecido")
@@ -216,6 +234,8 @@ func (a *App) loginToFusionSolar(ctx context.Context, browser *rod.Browser) (*ro
 	return nil, fmt.Errorf("failed to login after %d attempts", a.MaxLoginRetries)
 }
 
+// StationData represents a parsed solar power station, providing the minimum
+// data needed (URL and human-readable Name) to navigate to its details page.
 type StationData struct {
 	URL  string
 	Name string
@@ -266,6 +286,8 @@ func (a *App) getStations(ctx context.Context, page *rod.Page) ([]StationData, e
 	return stationsData, nil
 }
 
+// Attachment holds file data in memory (e.g., base64-decoded image bytes)
+// to be directly injected into multipart email payloads without requiring disk I/O.
 type Attachment struct {
 	Name    string
 	Content []byte
@@ -328,6 +350,9 @@ func (a *App) collectStationData(ctx context.Context, page *rod.Page, stationsDa
 	return emailBody.String(), attachments, nil
 }
 
+// sendEmail constructs and sends a multipart MIME email payload via standard SMTP.
+// It injects memory-resident image attachments directly into the message buffer,
+// parses dynamic ports defaulting to 587, and handles connection dialing via gomail.
 func (a *App) sendEmail(subject, body string, attachments []Attachment) {
 	slog.Info("[*] Enviando emails")
 

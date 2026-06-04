@@ -31,6 +31,9 @@ var (
 	maxLoginRetries  int
 )
 
+// rootCmd represents the base command when called without any subcommands.
+// It intercepts the version flag directly, otherwise delegating to runBot
+// to execute the standard scraping pipeline.
 var rootCmd = &cobra.Command{
 	Use:   "fusionsolar-bot",
 	Short: "FusionSolar data collector",
@@ -44,6 +47,8 @@ var rootCmd = &cobra.Command{
 	},
 }
 
+// Execute adds all child commands to the root command and sets flags appropriately.
+// This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)
@@ -73,6 +78,9 @@ func init() {
 	bindFlags()
 }
 
+// bindFlags synchronizes Cobra command line flags with Viper's configuration map.
+// This allows the application logic to read from Viper uniformly, regardless of
+// whether a value was provided via a CLI flag, an environment variable, or a config file.
 func bindFlags() {
 	viper.BindPFlag("user", rootCmd.Flags().Lookup("user"))
 	viper.BindPFlag("password", rootCmd.Flags().Lookup("password"))
@@ -87,6 +95,9 @@ func bindFlags() {
 	viper.BindPFlag("max-login-retries", rootCmd.Flags().Lookup("max-login-retries"))
 }
 
+// initConfig reads in config file and ENV variables if set.
+// It prioritizes explicit config files over $HOME defaults, and explicitly
+// maps legacy/Python script-compatible environment variable names to internal viper keys.
 func initConfig() {
 	if cfgFile != "" {
 		viper.SetConfigFile(cfgFile)
@@ -119,6 +130,9 @@ func initConfig() {
 	}
 }
 
+// runBot bridges the Viper configuration context to the fusionsolar.App domain object.
+// It parses raw string inputs (like comma-separated destination emails) into slices,
+// enforces the global execution timeout, and invokes the central App.Run method.
 func runBot() {
 	runTimeout := viper.GetDuration("timeout")
 	if runTimeout <= 0 {
