@@ -2,6 +2,7 @@ package fusionsolar
 
 import (
 	"log/slog"
+	"time"
 
 	"github.com/getsentry/sentry-go"
 )
@@ -18,4 +19,10 @@ func ReportError(msg string, err error, args ...any) {
 	}
 
 	slog.Error(msg, args...)
+}
+
+// FlushSentry flushes any buffered Sentry events.
+// It acts as an abstraction so callers don't need to depend on the sentry package directly.
+func FlushSentry(timeout time.Duration) {
+	sentry.Flush(timeout)
 }

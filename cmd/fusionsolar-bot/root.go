@@ -3,7 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
+	"log/slog"
 	"os"
 	"strings"
 	"time"
@@ -46,7 +46,7 @@ var rootCmd = &cobra.Command{
 
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
-		fmt.Println(err)
+		fusionsolar.ReportError("Failed to execute root command", err)
 		os.Exit(1)
 	}
 }
@@ -93,7 +93,7 @@ func initConfig() {
 	} else {
 		home, err := os.UserHomeDir()
 		if err != nil {
-			fmt.Println(err)
+			fusionsolar.ReportError("Failed to get user home directory", err)
 			os.Exit(1)
 		}
 
@@ -115,7 +115,7 @@ func initConfig() {
 	viper.BindEnv("max-login-retries", "MAX_LOGIN_RETRIES")
 
 	if err := viper.ReadInConfig(); err == nil {
-		fmt.Println("Using config file:", viper.ConfigFileUsed())
+		slog.Info("Using config file", "path", viper.ConfigFileUsed())
 	}
 }
 
@@ -147,6 +147,8 @@ func runBot() {
 	}
 
 	if err := app.Run(ctx); err != nil {
-		log.Fatal(err)
+		fusionsolar.ReportError("Application failed", err)
+		fusionsolar.FlushSentry(2 * time.Second)
+		os.Exit(1)
 	}
 }

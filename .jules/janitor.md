@@ -13,3 +13,9 @@
 **Root Cause:** The `setupBrowser` method used `os.Getenv` directly, and `sendEmail` handled parsing of destination strings.
 **Solution:** Refactored `App` struct to accept `ChromiumPath` and `SmtpDestinations` (as `[]string`). Moved the environment variable binding and string parsing logic to the `cobra`/`viper` setup in `cmd/fusionsolar-bot/root.go`.
 **Pattern:** Decouple application logic from configuration sources. Pass configuration as struct fields or arguments. Use `viper` for centralized configuration management to support multiple sources (flags, env vars, config files) transparently.
+
+## 2024-07-27 - Centralize Error Reporting in CLI Layer
+**Issue:** The application entrypoint (`cmd/fusionsolar-bot/root.go`) was using `fmt.Println` and `log.Fatal` to handle errors, which caused them to bypass the Sentry error tracking and structured logging set up in `fusionsolar.ReportError`.
+**Root Cause:** The `ReportError` utility was implemented in the core module but the CLI bootstrapping logic had not been refactored to use it, maintaining a retroactive violation of error handling guidelines. Additionally, Sentry had to be flushed safely before exiting on fatal errors, without leaking the dependency to the caller.
+**Solution:** Replaced `fmt.Println` and `log.Fatal` with calls to `fusionsolar.ReportError`. To ensure Sentry events are flushed during fatal crashes without exposing the `getsentry/sentry-go` package to `root.go`, added a `fusionsolar.FlushSentry` wrapper function in `error_reporter.go`. Finally, replaced `fmt.Println` for general info with `slog.Info`.
+**Pattern:** Always funnel unexpected errors through a single, centralized error-reporting function (`fusionsolar.ReportError`). Wrap required external package logic (like flushing Sentry) in the same utility package so call sites remain agnostic to the specific error reporting backend.
