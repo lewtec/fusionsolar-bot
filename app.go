@@ -163,17 +163,19 @@ func (a *App) loginToFusionSolar(ctx context.Context, browser *rod.Browser) (*ro
 		page := browser.MustPage("https://intl.fusionsolar.huawei.com/pvmswebsite/login/build/index.html#/LOGIN")
 
 		page.MustWaitLoad()
-		sleepContext(ctx, 5*time.Second)
+		page.MustWaitIdle()
 		if err := ctx.Err(); err != nil {
 			return nil, err
 		}
 
-		page.MustElement("div#username input").MustInput(a.User)
+		page.MustElement("div#username input").MustWaitVisible().MustInput(a.User)
 		passwordInput := page.MustElement("div#password input")
 		passwordInput.MustInput(a.Password)
+		waitNav := page.MustWaitNavigation()
 		passwordInput.MustType(input.Enter)
-
-		sleepContext(ctx, 10*time.Second)
+		waitNav()
+		page.MustWaitLoad()
+		page.MustWaitIdle()
 		if err := ctx.Err(); err != nil {
 			return nil, err
 		}
