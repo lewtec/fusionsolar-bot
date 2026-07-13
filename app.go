@@ -87,22 +87,19 @@ func (a *App) Run(ctx context.Context) error {
 	// Login
 	page, err := a.loginToFusionSolar(ctx, browser)
 	if err != nil {
-		ReportError("Failed to login to FusionSolar", err)
-		return err
+		return fmt.Errorf("failed to login to FusionSolar: %w", err)
 	}
 
 	// Get Stations
 	stationsData, err := a.getStations(ctx, page)
 	if err != nil {
-		ReportError("Failed to get stations", err)
-		return err
+		return fmt.Errorf("failed to get stations: %w", err)
 	}
 
 	// Collect Data
 	emailBody, attachments, err := a.collectStationData(ctx, page, stationsData)
 	if err != nil {
-		ReportError("Failed to collect station data", err)
-		return err
+		return fmt.Errorf("failed to collect station data: %w", err)
 	}
 
 	fmt.Println(emailBody)
@@ -114,11 +111,9 @@ func (a *App) Run(ctx context.Context) error {
 
 		subject := fmt.Sprintf("Relatório do dia %s FusionSolar", time.Now().Format("2006-01-02"))
 
-		a.sendEmail(
-			subject,
-			emailBody,
-			attachments,
-		)
+		if err := a.sendEmail(subject, emailBody, attachments); err != nil {
+			return fmt.Errorf("failed to send email: %w", err)
+		}
 	}
 	return nil
 }
@@ -246,7 +241,6 @@ func (a *App) getStations(ctx context.Context, page *rod.Page) ([]StationData, e
 			slog.Info("[*] URL atual", "url", page.MustInfo().URL)
 			if attempts >= maxAttempts {
 				err := fmt.Errorf("failed to find stations after %d attempts", maxAttempts)
-				ReportError("[*] Sem estações, desistindo...", err)
 				// We don't exit here anymore, return empty or error
 				return nil, err
 			}
@@ -328,7 +322,7 @@ func (a *App) collectStationData(ctx context.Context, page *rod.Page, stationsDa
 	return emailBody.String(), attachments, nil
 }
 
-func (a *App) sendEmail(subject, body string, attachments []Attachment) {
+func (a *App) sendEmail(subject, body string, attachments []Attachment) error {
 	slog.Info("[*] Enviando emails")
 
 	m := gomail.NewMessage()
@@ -352,13 +346,13 @@ func (a *App) sendEmail(subject, body string, attachments []Attachment) {
 	}
 	port, err := strconv.Atoi(portStr)
 	if err != nil {
-		ReportError("invalid smtp port", err)
-		return
+		return fmt.Errorf("invalid smtp port: %w", err)
 	}
 
 	d := gomail.NewDialer(host, port, a.SmtpUser, a.SmtpPasswd)
 
 	if err := d.DialAndSend(m); err != nil {
-		ReportError("Error sending email", err)
+		return fmt.Errorf("error sending email: %w", err)
 	}
+	return nil
 }
