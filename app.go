@@ -36,13 +36,15 @@ type App struct {
 	MaxLoginRetries  int
 }
 
-func sleepContext(ctx context.Context, d time.Duration) {
+func sleepContext(ctx context.Context, d time.Duration) error {
 	timer := time.NewTimer(d)
 	defer timer.Stop()
 
 	select {
 	case <-ctx.Done():
+		return ctx.Err()
 	case <-timer.C:
+		return nil
 	}
 }
 
@@ -158,8 +160,7 @@ func (a *App) loginToFusionSolar(ctx context.Context, browser *rod.Browser) (*ro
 		page := browser.MustPage("https://intl.fusionsolar.huawei.com/pvmswebsite/login/build/index.html#/LOGIN")
 
 		page.MustWaitLoad()
-		sleepContext(ctx, 5*time.Second)
-		if err := ctx.Err(); err != nil {
+		if err := sleepContext(ctx, 5*time.Second); err != nil {
 			return nil, err
 		}
 
@@ -168,8 +169,7 @@ func (a *App) loginToFusionSolar(ctx context.Context, browser *rod.Browser) (*ro
 		passwordInput.MustInput(a.Password)
 		passwordInput.MustType(input.Enter)
 
-		sleepContext(ctx, 10*time.Second)
-		if err := ctx.Err(); err != nil {
+		if err := sleepContext(ctx, 10*time.Second); err != nil {
 			return nil, err
 		}
 
@@ -189,13 +189,11 @@ func (a *App) loginToFusionSolar(ctx context.Context, browser *rod.Browser) (*ro
 
 			approveBtn, err := modal.Element("button.dpdesign-btn-primary")
 			if err == nil {
-				sleepContext(ctx, 1*time.Second)
-				if err := ctx.Err(); err != nil {
+				if err := sleepContext(ctx, 1*time.Second); err != nil {
 					return nil, err
 				}
 				approveBtn.MustClick()
-				sleepContext(ctx, 10*time.Second)
-				if err := ctx.Err(); err != nil {
+				if err := sleepContext(ctx, 10*time.Second); err != nil {
 					return nil, err
 				}
 			}
@@ -228,8 +226,7 @@ func (a *App) getStations(ctx context.Context, page *rod.Page) ([]StationData, e
 	for len(stationsData) == 0 && attempts < maxAttempts {
 		slog.Info("[*] Acessando homepage")
 		page.MustNavigate("https://intl.fusionsolar.huawei.com")
-		sleepContext(ctx, 10*time.Second)
-		if err := ctx.Err(); err != nil {
+		if err := sleepContext(ctx, 10*time.Second); err != nil {
 			return nil, err
 		}
 
@@ -277,8 +274,7 @@ func (a *App) collectStationData(ctx context.Context, page *rod.Page, stationsDa
 	for _, station := range stationsData {
 		slog.Info("[*] Coletando dados da estação", "station", station.Name)
 		page.MustNavigate(station.URL)
-		sleepContext(ctx, 10*time.Second)
-		if err := ctx.Err(); err != nil {
+		if err := sleepContext(ctx, 10*time.Second); err != nil {
 			return emailBody.String(), attachments, err
 		}
 
