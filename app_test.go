@@ -11,8 +11,11 @@ func TestSleepContextStopsWhenContextIsCanceled(t *testing.T) {
 	cancel()
 
 	start := time.Now()
-	sleepContext(ctx, 30*time.Second)
+	err := sleepContext(ctx, 30*time.Second)
 	if elapsed := time.Since(start); elapsed > 50*time.Millisecond {
 		t.Fatalf("sleepContext should return immediately on cancellation, took %s", elapsed)
+	}
+	if err == nil || err != context.Canceled {
+		t.Fatalf("expected context.Canceled error, got %v", err)
 	}
 }
