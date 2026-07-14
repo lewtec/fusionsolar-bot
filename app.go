@@ -48,11 +48,27 @@ func sleepContext(ctx context.Context, d time.Duration) error {
 	}
 }
 
-func (a *App) Run(ctx context.Context) error {
+// reportPanic sends a recovered panic value to Sentry and returns it as an error
+// so callers do not treat Must* (or other) panics as a successful Run.
+func reportPanic(r any) error {
+	sentry.CurrentHub().Recover(r)
+	if err, ok := r.(error); ok {
+		return fmt.Errorf("panic: %w", err)
+	}
+	return fmt.Errorf("panic: %v", r)
+}
+
+func (a *App) Run(ctx context.Context) (err error) {
 	// Setup Sentry
 	a.setupSentry()
 	defer sentry.Flush(2 * time.Second)
-	defer sentry.Recover()
+	// Must* rod helpers panic on failure. Convert panics into a non-nil error so
+	// the CLI exits non-zero instead of looking successful after sentry.Recover().
+	defer func() {
+		if r := recover(); r != nil {
+			err = reportPanic(r)
+		}
+	}()
 
 	// Validate credentials
 	if a.User == "" || a.Password == "" {
