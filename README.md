@@ -74,12 +74,14 @@ jobs:
           password: ${{ secrets.FUSIONSOLAR_PASSWORD }}
           browser_cdp: ws://browserless:3000/devtools/browser/SEU_ID_AQUI
           smtp_user: ${{ secrets.SMTP_USER }}
+          smtp_from: ${{ secrets.SMTP_FROM }}
           smtp_passwd: ${{ secrets.SMTP_PASSWD }}
           smtp_server: ${{ secrets.SMTP_SERVER }}
           smtp_destinations: ${{ secrets.SMTP_DESTINATIONS }}
+          # opcionais: sentry_dsn, timeout, max_login_retries, verbose
 ```
 
-O ponto importante é que a action *não* sobe o browser sozinha: ela só recebe o `browser_cdp`. Se você preferir outro backend compatível com CDP, basta trocar o service e a URL.
+O ponto importante é que a action *não* sobe o browser sozinha: ela só recebe o `browser_cdp`. Se você preferir outro backend compatível com CDP, basta trocar o service e a URL. Inputs opcionais espelham as mesmas variáveis de ambiente do binário (`SMTP_FROM`, `SENTRY_DSN`, `TIMEOUT`, `MAX_LOGIN_RETRIES`, `VERBOSE`).
 
 ## Parâmetros
 Esse projeto faz basicamente duas coisas:
@@ -100,7 +102,8 @@ Parâmetros no formato `flag` / `variável de ambiente`.
 - `--sentry-dsn` / `SENTRY_DSN`: DSN do Sentry para monitoramento de erros
 - `--timeout` / `TIMEOUT`: tempo máximo total de execução antes de cancelar o trabalho, padrão: 10 minutos
 - `--browser-cdp` / `BROWSER_CDP`: endpoint CDP do navegador remoto (obrigatório)
-- `--verbose` (apenas flag): dar mais detalhes sobre o que está acontecendo, bom para debug
+- `--max-login-retries` / `MAX_LOGIN_RETRIES`: tentativas de login antes de falhar, padrão: 5
+- `--verbose` / `VERBOSE`: dar mais detalhes sobre o que está acontecendo, bom para debug
 - `--version`: exibe a versão do programa
 
 ## Recomendações

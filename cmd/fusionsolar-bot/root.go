@@ -59,7 +59,7 @@ func init() {
 	rootCmd.Flags().StringVar(&user, "user", "", "FusionSolar username")
 	rootCmd.Flags().StringVar(&password, "password", "", "FusionSolar password")
 	rootCmd.Flags().StringVar(&smtpUser, "smtp-user", "", "SMTP username")
-	rootCmd.Flags().StringVar(&smtpFrom, "smtp-from", "", "SMTP username (default to smtp-user if not provided)")
+	rootCmd.Flags().StringVar(&smtpFrom, "smtp-from", "", "SMTP From address (defaults to smtp-user if empty)")
 	rootCmd.Flags().StringVar(&smtpPasswd, "smtp-passwd", "", "SMTP password")
 	rootCmd.Flags().StringVar(&smtpServer, "smtp-server", "", "SMTP server (format: server:port)")
 	rootCmd.Flags().StringVar(&smtpDestinations, "smtp-destinations", "", "Email recipients (space separated)")
@@ -85,6 +85,7 @@ func bindFlags() {
 	viper.BindPFlag("timeout", rootCmd.Flags().Lookup("timeout"))
 	viper.BindPFlag("browser-cdp", rootCmd.Flags().Lookup("browser-cdp"))
 	viper.BindPFlag("max-login-retries", rootCmd.Flags().Lookup("max-login-retries"))
+	viper.BindPFlag("verbose", rootCmd.Flags().Lookup("verbose"))
 }
 
 func initConfig() {
@@ -113,6 +114,7 @@ func initConfig() {
 	viper.BindEnv("timeout", "TIMEOUT")
 	viper.BindEnv("browser-cdp", "BROWSER_CDP")
 	viper.BindEnv("max-login-retries", "MAX_LOGIN_RETRIES")
+	viper.BindEnv("verbose", "VERBOSE")
 
 	if err := viper.ReadInConfig(); err == nil {
 		slog.Info("Using config file", "path", viper.ConfigFileUsed())
@@ -142,7 +144,7 @@ func runBot() {
 		SmtpDestinations: destinations,
 		SentryDsn:        viper.GetString("sentry-dsn"),
 		BrowserCDP:       viper.GetString("browser-cdp"),
-		Verbose:          verbose,
+		Verbose:          viper.GetBool("verbose"),
 		MaxLoginRetries:  viper.GetInt("max-login-retries"),
 	}
 

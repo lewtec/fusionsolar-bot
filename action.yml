@@ -15,12 +15,22 @@ inputs:
     required: true
   smtp_user:
     description: User for SMTP server to send the email
+  smtp_from:
+    description: SMTP From address (optional; defaults to smtp_user inside the bot)
   smtp_passwd:
     description: Password for SMTP server to send the email
   smtp_server:
-    description: SMTP server to send email
+    description: SMTP server to send email (host:port)
   smtp_destinations:
     description: List of emails to send the results separated by space
+  sentry_dsn:
+    description: Sentry DSN for error tracking (optional)
+  timeout:
+    description: Maximum total runtime (Go duration, e.g. 10m). Optional; bot default is 10m
+  max_login_retries:
+    description: Maximum login attempts before failing (optional; bot default is 5)
+  verbose:
+    description: Enable verbose rod tracing when set to a non-empty value (e.g. "true")
 runs:
   using: composite
   steps:
@@ -35,18 +45,43 @@ runs:
         echo "::add-mask::${{ inputs.password }}"
         echo "::add-mask::${{ inputs.browser_cdp }}"
         echo "::add-mask::${{ inputs.smtp_user }}"
+        echo "::add-mask::${{ inputs.smtp_from }}"
         echo "::add-mask::${{ inputs.smtp_passwd }}"
         echo "::add-mask::${{ inputs.smtp_server }}"
         echo "::add-mask::${{ inputs.smtp_destinations }}"
+        echo "::add-mask::${{ inputs.sentry_dsn }}"
     - name: Run fusionsolar workflow in one go
       shell: bash
+      env:
+        INPUT_BROWSER_CDP: ${{ inputs.browser_cdp }}
+        INPUT_USER: ${{ inputs.user }}
+        INPUT_PASSWORD: ${{ inputs.password }}
+        INPUT_SMTP_USER: ${{ inputs.smtp_user }}
+        INPUT_SMTP_FROM: ${{ inputs.smtp_from }}
+        INPUT_SMTP_PASSWD: ${{ inputs.smtp_passwd }}
+        INPUT_SMTP_SERVER: ${{ inputs.smtp_server }}
+        INPUT_SMTP_DESTINATIONS: ${{ inputs.smtp_destinations }}
+        INPUT_SENTRY_DSN: ${{ inputs.sentry_dsn }}
+        INPUT_TIMEOUT: ${{ inputs.timeout }}
+        INPUT_MAX_LOGIN_RETRIES: ${{ inputs.max_login_retries }}
+        INPUT_VERBOSE: ${{ inputs.verbose }}
       run: |
-        docker run -i \
-          -e BROWSER_CDP="${{ inputs.browser_cdp }}" \
-          -e FUSIONSOLAR_USER="${{ inputs.user }}" \
-          -e FUSIONSOLAR_PASSWORD="${{ inputs.password }}" \
-          -e SMTP_USER="${{ inputs.smtp_user }}" \
-          -e SMTP_PASSWD="${{ inputs.smtp_passwd }}" \
-          -e SMTP_SERVER="${{ inputs.smtp_server }}" \
-          -e SMTP_DESTINATIONS="${{ inputs.smtp_destinations }}" \
-          ghcr.io/lucasew/fusionsolar-bot:$CONTAINER_REF
+        # Only pass non-empty optionals so the bot keeps its own defaults
+        # (empty MAX_LOGIN_RETRIES/TIMEOUT would otherwise become 0).
+        docker_args=(
+          -e "BROWSER_CDP=${INPUT_BROWSER_CDP}"
+          -e "FUSIONSOLAR_USER=${INPUT_USER}"
+          -e "FUSIONSOLAR_PASSWORD=${INPUT_PASSWORD}"
+        )
+        [[ -n "${INPUT_SMTP_USER}" ]] && docker_args+=(-e "SMTP_USER=${INPUT_SMTP_USER}")
+        [[ -n "${INPUT_SMTP_FROM}" ]] && docker_args+=(-e "SMTP_FROM=${INPUT_SMTP_FROM}")
+        [[ -n "${INPUT_SMTP_PASSWD}" ]] && docker_args+=(-e "SMTP_PASSWD=${INPUT_SMTP_PASSWD}")
+        [[ -n "${INPUT_SMTP_SERVER}" ]] && docker_args+=(-e "SMTP_SERVER=${INPUT_SMTP_SERVER}")
+        [[ -n "${INPUT_SMTP_DESTINATIONS}" ]] && docker_args+=(-e "SMTP_DESTINATIONS=${INPUT_SMTP_DESTINATIONS}")
+        [[ -n "${INPUT_SENTRY_DSN}" ]] && docker_args+=(-e "SENTRY_DSN=${INPUT_SENTRY_DSN}")
+        [[ -n "${INPUT_TIMEOUT}" ]] && docker_args+=(-e "TIMEOUT=${INPUT_TIMEOUT}")
+        [[ -n "${INPUT_MAX_LOGIN_RETRIES}" ]] && docker_args+=(-e "MAX_LOGIN_RETRIES=${INPUT_MAX_LOGIN_RETRIES}")
+        [[ -n "${INPUT_VERBOSE}" ]] && docker_args+=(-e "VERBOSE=${INPUT_VERBOSE}")
+
+        docker run -i "${docker_args[@]}" \
+          "ghcr.io/lucasew/fusionsolar-bot:${CONTAINER_REF}"
