@@ -1,0 +1,18 @@
+{
+  "dependencies": [
+    {
+      "kind": "tool",
+      "ref": "github:golangci/golangci-lint",
+      "depName": "golangci/golangci-lint",
+      "currentValue": "v2.12.2",
+      "datasource": "github-releases"
+    },
+    {
+      "kind": "tool",
+      "ref": "github:rhysd/actionlint",
+      "depName": "rhysd/actionlint",
+      "currentValue": "v1.7.12",
+      "datasource": "github-releases"
+    }
+  ]
+}

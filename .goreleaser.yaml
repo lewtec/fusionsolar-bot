@@ -1,0 +1,104 @@
+# yaml-language-server: $schema=https://goreleaser.com/static/schema.json
+# vim: set ts=2 sw=2 tw=0 fo=cnqoj
+#
+# Binaries (linux amd64/arm64) + GHCR image (alpine runtime, remote CDP only).
+
+version: 2
+project_name: fusionsolar-bot
+
+before:
+  hooks:
+    - go mod tidy
+    - mise run ci
+
+builds:
+  - id: fusionsolar-bot
+    binary: fusionsolar-bot
+    main: ./cmd/fusionsolar-bot
+    env:
+      - CGO_ENABLED=0
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w -X github.com/lewtec/fusionsolar-bot/internal/version.version={{ .Version }}
+    goos:
+      - linux
+    goarch:
+      - amd64
+      - arm64
+
+archives:
+  - formats: [tar.gz]
+    name_template: >-
+      {{ .ProjectName }}_
+      {{- title .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "386" }}i386
+      {{- else }}{{ .Arch }}{{ end }}
+      {{- if .Arm }}v{{ .Arm }}{{ end }}
+    files:
+      - none*
+
+dockers_v2:
+  - id: fusionsolar-bot
+    ids:
+      - fusionsolar-bot
+    dockerfile: Dockerfile
+    images:
+      - "ghcr.io/lewtec/{{ .ProjectName }}"
+    tags:
+      - "{{ .Version }}"
+      - latest
+    sbom: false
+    platforms:
+      - linux/amd64
+    labels:
+      "org.opencontainers.image.created": "{{ .Date }}"
+      "org.opencontainers.image.name": "{{ .ProjectName }}"
+      "org.opencontainers.image.revision": "{{ .FullCommit }}"
+      "org.opencontainers.image.version": "{{ .Version }}"
+      "org.opencontainers.image.source": "{{ .GitURL }}"
+      "org.opencontainers.image.description": "FusionSolar production report bot (remote CDP browser)"
+    flags:
+      - "--provenance=false"
+
+checksum:
+  name_template: checksums.txt
+  algorithm: sha256
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^ci:"
+      - Merge pull request
+      - Merge branch
+
+snapshot:
+  version_template: "{{ .Tag }}-next"
+
+release:
+  draft: false
+  prerelease: auto
+  footer: >-
+
+    ---
+
+    **Container**
+
+    ```text
+    docker pull ghcr.io/lewtec/fusionsolar-bot:{{ .Version }}
+    docker run --rm \
+      -e BROWSER_CDP=ws://your-cdp-endpoint \
+      -e FUSIONSOLAR_USER=... \
+      -e FUSIONSOLAR_PASSWORD=... \
+      ghcr.io/lewtec/fusionsolar-bot:{{ .Version }}
+    ```
+
+    Browser is not in the image — pass a remote CDP endpoint.
+
+    ---
+
+    Released by [GoReleaser](https://github.com/goreleaser/goreleaser).

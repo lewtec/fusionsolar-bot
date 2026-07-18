@@ -1,2 +1,43 @@
 [tools]
 go = "1.26.3"
+goreleaser = "2.17.0"
+svu = "3.3.0"
+"github:lucasew/workspaced" = "0.9.4"
+
+[tasks.install]
+description = "Install dependencies"
+run = "go mod download"
+
+[tasks.fmt]
+description = "Format codebase (workspaced)"
+run = "workspaced codebase format"
+
+[tasks.lint]
+description = "Lint codebase (workspaced)"
+run = "workspaced codebase lint"
+
+[tasks.test]
+description = "Run tests"
+run = "go test ./..."
+
+[tasks.build]
+description = "Build binary"
+run = "go build -o fusionsolar-bot ./cmd/fusionsolar-bot"
+
+[tasks.ci]
+description = "Run CI checks"
+depends = ["install", "fmt", "lint", "test", "build"]
+
+[tasks.release]
+description = "Tag and release with GoReleaser (svu + goreleaser)"
+depends = ["ci"]
+usage = '''
+arg "<version>" help="New version" {
+  choices "next" "major" "minor" "patch"
+  default "next"
+}
+'''
+run = '''
+git tag $(svu ${usage_version})
+goreleaser release --clean
+'''

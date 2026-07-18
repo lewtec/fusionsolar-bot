@@ -2,10 +2,8 @@ package fusionsolar
 
 import (
 	"context"
-	_ "embed"
 	"encoding/base64"
 	"fmt"
-	"gopkg.in/gomail.v2"
 	"io"
 	"log/slog"
 	"net"
@@ -15,12 +13,9 @@ import (
 
 	"github.com/getsentry/sentry-go"
 	"github.com/go-rod/rod"
-
 	"github.com/go-rod/rod/lib/input"
+	"gopkg.in/gomail.v2"
 )
-
-//go:embed version.txt
-var Version string
 
 type App struct {
 	User             string

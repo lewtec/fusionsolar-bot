@@ -24,10 +24,23 @@ inputs:
 runs:
   using: composite
   steps:
-    - name: Get container tag
+    - name: Resolve container tag from action ref
       shell: bash
       run: |
-        echo CONTAINER_REF="$(cat "${{ github.action_path }}/version.txt")" >> $GITHUB_ENV
+        set -euo pipefail
+        REF="${{ github.action_ref }}"
+        REF="${REF#refs/tags/}"
+        REF="${REF#refs/heads/}"
+        case "$REF" in
+          main|master|"")
+            TAG=latest
+            ;;
+          *)
+            TAG="$REF"
+            ;;
+        esac
+        echo "CONTAINER_REF=$TAG" >> "$GITHUB_ENV"
+        echo "Using ghcr.io/lewtec/fusionsolar-bot:$TAG"
     - name: Hide secrets
       shell: bash
       run: |
@@ -49,4 +62,4 @@ runs:
           -e SMTP_PASSWD="${{ inputs.smtp_passwd }}" \
           -e SMTP_SERVER="${{ inputs.smtp_server }}" \
           -e SMTP_DESTINATIONS="${{ inputs.smtp_destinations }}" \
-          ghcr.io/lucasew/fusionsolar-bot:$CONTAINER_REF
+          "ghcr.io/lewtec/fusionsolar-bot:${CONTAINER_REF}"
