@@ -2,51 +2,52 @@
 
 Puxa os dados de produção do dia do Fusion Solar e manda para a lista de e-mails indicada.
 
+Repositório: [lewtec/fusionsolar-bot](https://github.com/lewtec/fusionsolar-bot).
+O navegador **não** vai na imagem — use um endpoint CDP remoto (`BROWSER_CDP`).
+
 ## Como "instalar"
 
 ### Docker
-Para rodar a versão mais recente diretamente do registro:
+
+Versão mais recente no GHCR:
 
 ```bash
-docker run -e BROWSER_CDP="ws://your-cdp-endpoint:9222/devtools/browser/abc123" ghcr.io/lucasew/fusionsolar-bot:latest [parametros]
+docker run --rm \
+  -e BROWSER_CDP="ws://your-cdp-endpoint:9222/devtools/browser/abc123" \
+  -e FUSIONSOLAR_USER=... \
+  -e FUSIONSOLAR_PASSWORD=... \
+  ghcr.io/lewtec/fusionsolar-bot:latest
 ```
 
-Para construir a imagem localmente:
+Imagens e binários Linux (amd64/arm64) saem no [GitHub Releases](https://github.com/lewtec/fusionsolar-bot/releases) via GoReleaser.
+A imagem de runtime só copia o binário estático (Alpine, non-root); o build é do GoReleaser, não de um `docker build` multi-stage local.
+
+### Go (binário / source)
+
+Este projeto usa [mise](https://mise.jdx.dev) para Go e ferramentas de release.
 
 ```bash
-docker build -t fusionsolar-bot .
-```
-
-E para rodar a imagem construída localmente:
-
-```bash
-docker run -e BROWSER_CDP="ws://your-cdp-endpoint:9222/devtools/browser/abc123" fusionsolar-bot [parametros]
-```
-
-Nenhum estado desse container precisa ser salvo.
-
-### Go (Binário/Source)
-Este projeto usa o [mise](https://mise.jdx.dev) para gerenciar a versão do Go. Se você tiver o `mise` instalado, basta entrar na pasta do projeto e ele baixará a versão correta do Go automaticamente.
-
-Este projeto depende de um navegador exposto via CDP. Configure a variável `BROWSER_CDP` com a URL do endpoint antes de rodar.
-
-Para rodar diretamente do código fonte:
-```bash
+mise install
 go run ./cmd/fusionsolar-bot [parametros]
+# ou
+go install github.com/lewtec/fusionsolar-bot/cmd/fusionsolar-bot@latest
 ```
 
-Para compilar e instalar:
+Configure `BROWSER_CDP` (ou `--browser-cdp`) antes de rodar.
+
+### Release (maintainers)
+
+Versionamento = tags git via [svu](https://github.com/caarlos0/svu) (sem prefixo `v`). Ver [SPEC.md](SPEC.md).
+
 ```bash
-go install ./cmd/fusionsolar-bot
-fusionsolar-bot [parametros]
+mise release next    # ou patch | minor | major
 ```
+
+No GitHub: **Actions → Autorelease → Run workflow** com o bump desejado. Push/PR só rodam CI (`mise run ci`).
 
 ### GitHub Actions
-Considerado experimental.
 
-Se quiser usar a action do repositório, a forma mais simples é subir um Browserless como *service* no workflow e passar o endpoint CDP para a action.
-
-Exemplo:
+Experimental. A action puxa `ghcr.io/lewtec/fusionsolar-bot` com a **mesma ref** do `uses:` (tag `0.7.0` → imagem `:0.7.0`; `main` → `:latest`). Ela **não** sobe o browser — passe `browser_cdp`.
 
 ```yaml
 name: fusionsolar-report
@@ -68,7 +69,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Run fusionsolar report
-        uses: lucasew/fusionsolar-bot@vX
+        uses: lewtec/fusionsolar-bot@0.6.1
         with:
           user: ${{ secrets.FUSIONSOLAR_USER }}
           password: ${{ secrets.FUSIONSOLAR_PASSWORD }}
@@ -79,14 +80,13 @@ jobs:
           smtp_destinations: ${{ secrets.SMTP_DESTINATIONS }}
 ```
 
-O ponto importante é que a action *não* sobe o browser sozinha: ela só recebe o `browser_cdp`. Se você preferir outro backend compatível com CDP, basta trocar o service e a URL.
-
 ## Parâmetros
+
 Esse projeto faz basicamente duas coisas:
 - Pega os dados de produção de todas as estações em uma conta fusionsolar
 - Envia os dados por e-mail para uma lista de emails definida
 
-Se as informações sobre o e-mail estão incompetas ele busca as informações igual, só não manda email. Bom pra testar.
+Se as informações sobre o e-mail estão incompletas ele busca as informações igual, só não manda email. Bom pra testar.
 
 Parâmetros no formato `flag` / `variável de ambiente`.
 
@@ -104,6 +104,7 @@ Parâmetros no formato `flag` / `variável de ambiente`.
 - `--version`: exibe a versão do programa
 
 ## Recomendações
+
 - Não use G-Mail como provedor de SMTP, muito menos sua conta pessoal. Eu uso uma conta
 gmx.com para isso. Todo dia vai pelo menos um email para mim e para o meu pai e nunca
 caiu no spam, e não preciso comprometer minha conta pessoal.
@@ -111,5 +112,6 @@ caiu no spam, e não preciso comprometer minha conta pessoal.
 isso acontece, por exemplo, quando eles trocam os termos.
 
 ## O que falta ser feito?
+
 - [ ] Endpoints alternativos: por enquanto a aplicação tá chumbada pra usar o endpoint internacional.
 - [ ] Deixar escalável 😂😂😂

@@ -8,7 +8,8 @@ import (
 	"strings"
 	"time"
 
-	fusionsolar "fusionsolar-bot"
+	fusionsolar "github.com/lewtec/fusionsolar-bot"
+	appversion "github.com/lewtec/fusionsolar-bot/internal/version"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -26,7 +27,7 @@ var (
 	sentryDsn        string
 	browserCDP       string
 	verbose          bool
-	version          bool
+	showVersion      bool
 	timeout          time.Duration
 	maxLoginRetries  int
 )
@@ -36,8 +37,8 @@ var rootCmd = &cobra.Command{
 	Short: "FusionSolar data collector",
 	Long:  `A bot to collect data from FusionSolar and send reports via email using an external CDP browser.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		if version {
-			fmt.Println(fusionsolar.Version)
+		if showVersion {
+			fmt.Println(appversion.Get())
 			os.Exit(0)
 		}
 		runBot()
@@ -66,7 +67,7 @@ func init() {
 	rootCmd.Flags().StringVar(&sentryDsn, "sentry-dsn", "", "Sentry DSN for error tracking")
 	rootCmd.Flags().StringVar(&browserCDP, "browser-cdp", "", "CDP endpoint for the browser")
 	rootCmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "Enable verbose logging")
-	rootCmd.Flags().BoolVar(&version, "version", false, "Print version and exit")
+	rootCmd.Flags().BoolVar(&showVersion, "version", false, "Print version and exit")
 	rootCmd.Flags().DurationVar(&timeout, "timeout", 10*time.Minute, "Maximum total runtime before cancellation")
 	rootCmd.Flags().IntVar(&maxLoginRetries, "max-login-retries", 5, "Maximum number of login retries")
 

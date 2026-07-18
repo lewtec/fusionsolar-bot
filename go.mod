@@ -1,4 +1,4 @@
-module fusionsolar-bot
+module github.com/lewtec/fusionsolar-bot
 
 go 1.25.0
 

@@ -3,30 +3,24 @@ name: Autorelease
 on:
   push:
     branches:
-    - main
-    tags:
-    - '*'
+      - main
   pull_request:
     branches:
-    - main
+      - main
   workflow_dispatch:
     inputs:
       new_version:
-        description: 'New tag version'
-        default: 'patch'
+        description: "New tag version"
         type: choice
+        default: "next"
         options:
-        - patch
-        - minor
-        - major
-  schedule:
-  - cron: '0 2 * * 6'   # saturday 2am
+          - next
+          - patch
+          - minor
+          - major
+
 jobs:
   autorelease:
-    env:
-      REGISTRY: ghcr.io
-      IMAGE_NAME: ${{ github.repository }}
-      USERNAME: ${{ github.actor }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -35,51 +29,39 @@ jobs:
       id-token: write
       pull-requests: write
     steps:
-    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 0
+          fetch-tags: true
 
-    - name: Login to registry
-      uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
-      with:
-        registry: ${{ env.REGISTRY }}
-        username: ${{ env.USERNAME }}
-        password: ${{ github.token }}
-
-    - name: Install mise
-      uses: jdx/mise-action@6d1e696aa24c1aa1bcc1adea0212707c71ab78a8 # v3
-
-    - name: Try to build it
-      run: |
-        go build ./cmd/fusionsolar-bot
-
-    - name: Make release if everything looks right
-      if: github.event_name != 'pull_request'
-      env:
-        NEW_VERSION: ${{ github.event.inputs.new_version }}
-      run: |
-        if [[ ! -z "$NEW_VERSION" ]]; then
+      - name: Setup git config
+        run: |
           git config user.name actions-bot
           git config user.email actions-bot@users.noreply.github.com
-          NO_TAG=1 ./make_release "$NEW_VERSION"
-          echo "New version: $(cat version.txt)" >> $GITHUB_STEP_SUMMARY
-          echo "RELEASE_VERSION=$(cat version.txt)" >> $GITHUB_ENV
-        fi
 
-    - name: Create release
-      if: github.event_name != 'pull_request' && env.RELEASE_VERSION != ''
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        TAG: ${{ env.RELEASE_VERSION }}
-        TITLE: Release ${{ env.RELEASE_VERSION }}
-      run: |
-        gh release create "$TAG" \
-          --title "$TITLE" \
-          --generate-notes \
-          --notes-start-tag $(gh release list --limit 1 --json tagName -q .[].tagName)
+      - uses: jdx/mise-action@dba19683ed58901619b14f395a24841710cb4925 # v4
 
-    - name: Build and publish container
-      if: github.event_name != 'pull_request' && env.RELEASE_VERSION != ''
-      run: |
-        docker build -t ghcr.io/${{ github.repository }}:${{ env.RELEASE_VERSION }} .
-        docker tag ghcr.io/${{ github.repository }}:${{ env.RELEASE_VERSION }} ghcr.io/${{ github.repository }}:latest
-        docker push ghcr.io/${{ github.repository }}:${{ env.RELEASE_VERSION }}
-        docker push ghcr.io/${{ github.repository }}:latest
+      - name: Install
+        run: mise run install
+
+      - name: CI
+        run: mise run ci
+
+      - name: Login to GHCR
+        if: github.event.inputs.new_version != '' && github.event_name != 'pull_request'
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        if: github.event.inputs.new_version != '' && github.event_name != 'pull_request'
+        uses: docker/setup-buildx-action@v3
+
+      - name: Release
+        if: github.event.inputs.new_version != '' && github.event_name != 'pull_request'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NEW_VERSION: ${{ github.event.inputs.new_version }}
+        run: mise release "$NEW_VERSION"
