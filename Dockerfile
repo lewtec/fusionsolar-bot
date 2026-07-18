@@ -7,6 +7,10 @@ RUN go mod download
 
 COPY . .
 
+# Fail the image build if analysis or unit tests regress (CI only go-builds today).
+RUN go vet ./... \
+ && go test ./... -count=1
+
 # Pure Go binary: static link, reproducible paths, smaller artifact.
 RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o fusionsolar-bot ./cmd/fusionsolar-bot
 
