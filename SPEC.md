@@ -59,7 +59,7 @@ action.yml                # image from action_ref → ghcr.io/lewtec/fusionsolar
 | `ci` | depends on fmt, lint, test, build (order as siblings) |
 | `release` | depends on `ci`; usage arg `next\|major\|minor\|patch` (default `next`); tag with svu then `goreleaser release --clean` |
 
-Tool pins: Go ~1.26 (match current toolchain), goreleaser ~2.17, svu 3.3.0, workspaced ~0.9.x (same family as ciborg).
+Tool pins: Go ~1.26 (match current toolchain), goreleaser ~2.17, svu 3.3.0, workspaced latest pin in `mise.toml` (currently 0.11.3).
 
 ## GoReleaser (v2)
 
