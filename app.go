@@ -15,6 +15,8 @@ import (
 	"github.com/go-rod/rod"
 	"github.com/go-rod/rod/lib/input"
 	"gopkg.in/gomail.v2"
+
+	appversion "github.com/lewtec/fusionsolar-bot/internal/version"
 )
 
 type App struct {
@@ -131,16 +133,24 @@ func (a *App) Run(ctx context.Context) (err error) {
 	return nil
 }
 
+// sentryOptions builds ClientOptions for this batch CLI.
+// Release tags events with the binary version; TracesSampleRate stays 0 because
+// short-lived scrape/report runs do not benefit from performance transactions.
+func sentryOptions(dsn, release string) sentry.ClientOptions {
+	return sentry.ClientOptions{
+		Dsn:              dsn,
+		Release:          release,
+		TracesSampleRate: 0,
+	}
+}
+
 func (a *App) setupSentry() {
 	if a.SentryDsn == "" {
 		slog.Warn("[!] Sentry: DSN não especificado. Variável de ambiente/flag faltando: SENTRY_DSN")
 		return
 	}
 	slog.Info("[*] Configurando sentry")
-	err := sentry.Init(sentry.ClientOptions{
-		Dsn:              a.SentryDsn,
-		TracesSampleRate: 1.0,
-	})
+	err := sentry.Init(sentryOptions(a.SentryDsn, appversion.Get()))
 	if err != nil {
 		ReportError("Sentry initialization failed", err)
 	}
