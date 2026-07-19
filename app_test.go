@@ -64,3 +64,16 @@ func TestRunConvertsPanicToError(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }
+
+func TestSentryOptionsTagsReleaseAndDisablesTraces(t *testing.T) {
+	opts := sentryOptions("https://public@example.com/1", "0.8.0")
+	if opts.Dsn != "https://public@example.com/1" {
+		t.Fatalf("Dsn = %q", opts.Dsn)
+	}
+	if opts.Release != "0.8.0" {
+		t.Fatalf("Release = %q, want binary version tag", opts.Release)
+	}
+	if opts.TracesSampleRate != 0 {
+		t.Fatalf("TracesSampleRate = %v, want 0 for batch CLI", opts.TracesSampleRate)
+	}
+}
