@@ -47,7 +47,11 @@ No GitHub: **Actions → Autorelease → Run workflow** com o bump desejado. Pus
 
 ### GitHub Actions
 
-Experimental. A action puxa `ghcr.io/lewtec/fusionsolar-bot` com a **mesma ref** do `uses:` (tag `0.7.0` → imagem `:0.7.0`; `main` → `:latest`). Ela **não** sobe o browser — passe `browser_cdp`.
+Experimental. A action composta puxa `ghcr.io/lewtec/fusionsolar-bot` com a **mesma ref** do `uses:` (tag `0.7.0` → imagem `:0.7.0`; branch `main` → `:latest`). Ela **não** sobe o browser — passe `browser_cdp`.
+
+`browser_cdp` tem de ser alcançável **de dentro do container do bot** (a action faz `docker run`). O hostname de um `services:` do job (ex.: `browserless`) **não** resolve na bridge padrão do Docker — use um endpoint CDP público/privado que o container consiga rotear, ou rode o browser no host e aponte para um IP/porta acessível de lá.
+
+Inputs opcionais (`smtp_from`, `sentry_dsn`, `timeout`, `max_login_retries`, `verbose`) existem no `action.yml` atual de `main` (e em tags posteriores a `0.7.0`). A tag `0.6.1` ainda apontava para a imagem antiga e não expõe esses inputs.
 
 ```yaml
 name: fusionsolar-report
@@ -57,23 +61,16 @@ on:
 jobs:
   report:
     runs-on: ubuntu-latest
-    services:
-      browserless:
-        image: browserless/chrome:latest
-        ports:
-          - 3000:3000
-        options: >-
-          --shm-size=1g
-
     steps:
-      - uses: actions/checkout@v4
-
       - name: Run fusionsolar report
-        uses: lewtec/fusionsolar-bot@0.6.1
+        # Prefer a released tag once it includes the optional inputs below;
+        # @main tracks the full Action surface and :latest image.
+        uses: lewtec/fusionsolar-bot@main
         with:
           user: ${{ secrets.FUSIONSOLAR_USER }}
           password: ${{ secrets.FUSIONSOLAR_PASSWORD }}
-          browser_cdp: ws://browserless:3000/devtools/browser/SEU_ID_AQUI
+          # Must be reachable from inside the bot container (not only the job VM).
+          browser_cdp: ${{ secrets.BROWSER_CDP }}
           smtp_user: ${{ secrets.SMTP_USER }}
           smtp_from: ${{ secrets.SMTP_FROM }}
           smtp_passwd: ${{ secrets.SMTP_PASSWD }}
