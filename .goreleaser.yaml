@@ -6,10 +6,12 @@
 version: 2
 project_name: fusionsolar-bot
 
+# CI already runs before release: workflow `mise run ci`, and `mise release`
+# depends on the `ci` task. Keep only tidy here so packaging sees a clean
+# module graph without a third full fmt/lint/test/build pass.
 before:
   hooks:
     - go mod tidy
-    - mise run ci
 
 builds:
   - id: fusionsolar-bot
