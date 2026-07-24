@@ -51,13 +51,51 @@ func TestResolveDevelUsesShortRevision(t *testing.T) {
 func TestResolvePseudoVersionUsesShortRevision(t *testing.T) {
 	got := resolve("dev", func() mainModule {
 		return mainModule{
-			Version:  "v0.1.1-0.20260721222329-88501666e7f6+dirty",
+			Version:  "v0.1.1-0.20260721222329-88501666e7f6",
 			Revision: "88501666e7f63553f7ca953b937b8531361a4a86",
 			OK:       true,
 		}
 	})
 	if got != "dev-8850166" {
 		t.Fatalf("resolve() = %q, want short VCS id over pseudo-version", got)
+	}
+}
+
+func TestResolveDirtyRevisionFromModuleVersion(t *testing.T) {
+	// +dirty on the module version must survive into the display id; previously
+	// we collapsed to the same dev-<sha> as a clean tree.
+	got := resolve("dev", func() mainModule {
+		return mainModule{
+			Version:  "v0.1.1-0.20260721222329-88501666e7f6+dirty",
+			Revision: "88501666e7f63553f7ca953b937b8531361a4a86",
+			OK:       true,
+		}
+	})
+	if got != "dev-8850166-dirty" {
+		t.Fatalf("resolve() = %q, want dev-8850166-dirty from +dirty module version", got)
+	}
+}
+
+func TestResolveDirtyRevisionFromVCSModified(t *testing.T) {
+	got := resolve("dev", func() mainModule {
+		return mainModule{
+			Version:  "(devel)",
+			Revision: "abcdef0123456789",
+			Modified: true,
+			OK:       true,
+		}
+	})
+	if got != "dev-abcdef0-dirty" {
+		t.Fatalf("resolve() = %q, want dev-abcdef0-dirty from vcs.modified", got)
+	}
+}
+
+func TestFormatDevRevision(t *testing.T) {
+	if got := formatDevRevision("abc1234", false); got != "dev-abc1234" {
+		t.Fatalf("clean = %q", got)
+	}
+	if got := formatDevRevision("abc1234", true); got != "dev-abc1234-dirty" {
+		t.Fatalf("dirty = %q", got)
 	}
 }
 
@@ -116,6 +154,7 @@ func TestIsPseudoVersion(t *testing.T) {
 		{"v0.1.1-0.20260721222329-88501666e7f6+dirty", true},
 		{"v0.0.0-20260721222329-88501666e7f6", true},
 		{"0.1.1-0.20260721222329-88501666e7f6", true},
+		{"1.0.0+dirty", true},
 	}
 	for _, tc := range cases {
 		if got := isPseudoVersion(tc.in); got != tc.want {
