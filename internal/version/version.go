@@ -16,7 +16,9 @@ var version = "dev"
 //  1. ldflags-injected version (GoReleaser release builds)
 //  2. stable module version from debug.ReadBuildInfo (go install @tag)
 //  3. "dev-<shortsha>" when Go stamps vcs.revision (local/CI checkouts,
-//     including module pseudo-versions that already embed a long commit id)
+//     including module pseudo-versions that already embed a long commit id);
+//     appends "-dirty" when the worktree is modified (vcs.modified or a
+//     +dirty module version) so --version and Sentry Release stay distinct
 //  4. "dev" when nothing else is available
 //
 // Sentry Release (setupSentry) and --version both use this string; local
@@ -29,6 +31,9 @@ func Get() string {
 type mainModule struct {
 	Version  string
 	Revision string
+	// Modified is true when the VCS worktree has uncommitted changes
+	// (build info vcs.modified=true) or the module version carries +dirty.
+	Modified bool
 	OK       bool
 }
 
@@ -39,12 +44,27 @@ func mainModuleInfo() mainModule {
 	}
 	m := mainModule{Version: info.Main.Version, OK: true}
 	for _, s := range info.Settings {
-		if s.Key == "vcs.revision" {
+		switch s.Key {
+		case "vcs.revision":
 			m.Revision = s.Value
-			break
+		case "vcs.modified":
+			m.Modified = s.Value == "true"
 		}
 	}
+	// Module versions from dirty checkouts often end with +dirty even when
+	// settings are incomplete (e.g. some go install paths).
+	if !m.Modified && strings.Contains(m.Version, "+dirty") {
+		m.Modified = true
+	}
 	return m
+}
+
+// formatDevRevision builds the local-dev version id from a short SHA.
+func formatDevRevision(rev string, dirty bool) string {
+	if dirty {
+		return "dev-" + rev + "-dirty"
+	}
+	return "dev-" + rev
 }
 
 // shortRevision returns a compact commit id for display (GitHub-style 7 chars).
@@ -113,7 +133,8 @@ func resolve(injected string, main func() mainModule) string {
 			}
 			if rev := shortRevision(m.Revision); rev != "" {
 				// Unique id for --version and Sentry Release when ldflags are unset.
-				return "dev-" + rev
+				dirty := m.Modified || strings.Contains(mv, "+dirty")
+				return formatDevRevision(rev, dirty)
 			}
 			// Pseudo-version without a separate revision stamp: keep stripped form.
 			if mv != "" && mv != "(devel)" {
