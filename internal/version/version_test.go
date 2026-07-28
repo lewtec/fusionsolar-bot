@@ -99,6 +99,27 @@ func TestFormatDevRevision(t *testing.T) {
 	}
 }
 
+func TestHasDirtyMarker(t *testing.T) {
+	if !hasDirtyMarker("v0.1.0+dirty") {
+		t.Fatal("expected +dirty marker")
+	}
+	if hasDirtyMarker("v0.1.0") {
+		t.Fatal("clean version should not be dirty")
+	}
+}
+
+func TestMainModuleIsDirty(t *testing.T) {
+	if (mainModule{Modified: true}).isDirty() != true {
+		t.Fatal("Modified flag should mark dirty")
+	}
+	if (mainModule{Version: "v1.0.0+dirty"}).isDirty() != true {
+		t.Fatal("+dirty version should mark dirty without Modified")
+	}
+	if (mainModule{Version: "v1.0.0"}).isDirty() {
+		t.Fatal("clean module should not be dirty")
+	}
+}
+
 func TestResolveDevelWithoutRevisionStaysDev(t *testing.T) {
 	got := resolve("dev", func() mainModule {
 		return mainModule{Version: "(devel)", OK: true}

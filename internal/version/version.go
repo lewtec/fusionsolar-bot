@@ -51,12 +51,21 @@ func mainModuleInfo() mainModule {
 			m.Modified = s.Value == "true"
 		}
 	}
-	// Module versions from dirty checkouts often end with +dirty even when
-	// settings are incomplete (e.g. some go install paths).
-	if !m.Modified && strings.Contains(m.Version, "+dirty") {
-		m.Modified = true
-	}
+	// +dirty on the module version is applied in isDirty (resolve), not here,
+	// so injectable mainModule fixtures and ReadBuildInfo share one rule.
 	return m
+}
+
+// hasDirtyMarker reports whether a module version string carries Go's +dirty
+// build suffix (modified worktree).
+func hasDirtyMarker(version string) bool {
+	return strings.Contains(version, "+dirty")
+}
+
+// isDirty is true when VCS settings say the tree is modified or the module
+// version string ends with +dirty (common when settings are incomplete).
+func (m mainModule) isDirty() bool {
+	return m.Modified || hasDirtyMarker(m.Version)
 }
 
 // formatDevRevision builds the local-dev version id from a short SHA.
@@ -87,7 +96,7 @@ func isPseudoVersion(v string) bool {
 	if v == "" || v == "(devel)" {
 		return false
 	}
-	if strings.Contains(v, "+dirty") {
+	if hasDirtyMarker(v) {
 		return true
 	}
 	// Pseudo-versions embed a 14-digit UTC timestamp (yyyymmddhhmmss),
@@ -133,8 +142,7 @@ func resolve(injected string, main func() mainModule) string {
 			}
 			if rev := shortRevision(m.Revision); rev != "" {
 				// Unique id for --version and Sentry Release when ldflags are unset.
-				dirty := m.Modified || strings.Contains(mv, "+dirty")
-				return formatDevRevision(rev, dirty)
+				return formatDevRevision(rev, m.isDirty())
 			}
 			// Pseudo-version without a separate revision stamp: keep stripped form.
 			if mv != "" && mv != "(devel)" {
