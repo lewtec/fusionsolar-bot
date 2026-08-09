@@ -175,59 +175,83 @@ func (a *App) setupBrowser(ctx context.Context) (*rod.Browser, error) {
 // It incorporates a retry mechanism bound by MaxLoginRetries to mitigate intermittent
 // network instability or slow SPA rendering. It yields a logged-in rod.Page or an
 // error if all retries are exhausted.
+// Failed attempts close their page so retries do not accumulate open CDP targets.
 func (a *App) loginToFusionSolar(ctx context.Context, browser *rod.Browser) (*rod.Page, error) {
 	for i := 0; i < a.MaxLoginRetries; i++ {
 		slog.Info("[*] Login attempt", "attempt", i+1, "maxRetries", a.MaxLoginRetries)
-		page := browser.MustPage("https://intl.fusionsolar.huawei.com/pvmswebsite/login/build/index.html#/LOGIN")
 
-		page.MustWaitLoad()
-		if err := sleepContext(ctx, 5*time.Second); err != nil {
+		page, err := a.tryLoginOnce(ctx, browser)
+		if err != nil {
 			return nil, err
 		}
-
-		page.MustElement("div#username input").MustInput(a.User)
-		passwordInput := page.MustElement("div#password input")
-		passwordInput.MustInput(a.Password)
-		passwordInput.MustType(input.Enter)
-
-		if err := sleepContext(ctx, 10*time.Second); err != nil {
-			return nil, err
-		}
-
-		// Handle cookie dialog
-		cookieButtons := page.MustElements("i.cookiePolicy-icon")
-		for _, button := range cookieButtons {
-			slog.Info("[*] Fechando diálogo de cookie")
-			button.MustClick()
-		}
-
-		// Handle privacy modal
-		modals := page.MustElements("div.nco-privacy-confirm-modal")
-		for _, modal := range modals {
-			if has, _, _ := modal.Has("div.nco-privacy-content"); !has {
-				continue
-			}
-
-			approveBtn, err := modal.Element("button.dpdesign-btn-primary")
-			if err == nil {
-				if err := sleepContext(ctx, 1*time.Second); err != nil {
-					return nil, err
-				}
-				approveBtn.MustClick()
-				if err := sleepContext(ctx, 10*time.Second); err != nil {
-					return nil, err
-				}
-			}
-		}
-
-		// Check if logged in
-		url := page.MustInfo().URL
-		if !strings.Contains(url, "login") {
+		if page != nil {
 			return page, nil
 		}
 		slog.Info("[*] Reiniciando processo de login")
 	}
 	return nil, fmt.Errorf("failed to login after %d attempts", a.MaxLoginRetries)
+}
+
+// tryLoginOnce runs a single login attempt. On success it returns the live page.
+// On a soft failure (still on the login URL) it closes the page and returns (nil, nil)
+// so the caller can retry. Hard failures close the page and return the error.
+func (a *App) tryLoginOnce(ctx context.Context, browser *rod.Browser) (*rod.Page, error) {
+	page := browser.MustPage("https://intl.fusionsolar.huawei.com/pvmswebsite/login/build/index.html#/LOGIN")
+	keepPage := false
+	defer func() {
+		if !keepPage {
+			// Best-effort close: a leak here only lasts until browser.Close.
+			_ = page.Close()
+		}
+	}()
+
+	page.MustWaitLoad()
+	if err := sleepContext(ctx, 5*time.Second); err != nil {
+		return nil, err
+	}
+
+	page.MustElement("div#username input").MustInput(a.User)
+	passwordInput := page.MustElement("div#password input")
+	passwordInput.MustInput(a.Password)
+	passwordInput.MustType(input.Enter)
+
+	if err := sleepContext(ctx, 10*time.Second); err != nil {
+		return nil, err
+	}
+
+	// Handle cookie dialog
+	cookieButtons := page.MustElements("i.cookiePolicy-icon")
+	for _, button := range cookieButtons {
+		slog.Info("[*] Fechando diálogo de cookie")
+		button.MustClick()
+	}
+
+	// Handle privacy modal
+	modals := page.MustElements("div.nco-privacy-confirm-modal")
+	for _, modal := range modals {
+		if has, _, _ := modal.Has("div.nco-privacy-content"); !has {
+			continue
+		}
+
+		approveBtn, err := modal.Element("button.dpdesign-btn-primary")
+		if err == nil {
+			if err := sleepContext(ctx, 1*time.Second); err != nil {
+				return nil, err
+			}
+			approveBtn.MustClick()
+			if err := sleepContext(ctx, 10*time.Second); err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	// Check if logged in
+	url := page.MustInfo().URL
+	if !strings.Contains(url, "login") {
+		keepPage = true
+		return page, nil
+	}
+	return nil, nil
 }
 
 type StationData struct {
