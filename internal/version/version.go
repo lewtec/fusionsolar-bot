@@ -101,7 +101,7 @@ func isPseudoVersion(v string) bool {
 	}
 	// Pseudo-versions embed a 14-digit UTC timestamp (yyyymmddhhmmss),
 	// optionally after a "0." base-version segment.
-	for _, part := range strings.Split(v, "-") {
+	for part := range strings.SplitSeq(v, "-") {
 		p := part
 		if strings.HasPrefix(p, "0.") && len(p) > 2 {
 			p = p[2:]
