@@ -8,6 +8,11 @@ import (
 	"time"
 )
 
+var (
+	errElementNotFound   = errors.New("element not found")
+	errMustElementFailed = errors.New("must-element failed")
+)
+
 func TestSleepContextStopsWhenContextIsCanceled(t *testing.T) {
 	ctx, cancel := context.WithCancel(t.Context())
 	cancel()
@@ -23,12 +28,11 @@ func TestSleepContextStopsWhenContextIsCanceled(t *testing.T) {
 }
 
 func TestReportPanicWrapsErrorValue(t *testing.T) {
-	inner := errors.New("element not found")
-	err := reportPanic(inner)
+	err := reportPanic(errElementNotFound)
 	if err == nil {
 		t.Fatal("expected non-nil error from reportPanic")
 	}
-	if !errors.Is(err, inner) {
+	if !errors.Is(err, errElementNotFound) {
 		t.Fatalf("expected wrapped panic error, got %v", err)
 	}
 	if !strings.HasPrefix(err.Error(), "panic: ") {
@@ -49,19 +53,18 @@ func TestReportPanicWrapsNonErrorValue(t *testing.T) {
 func TestRunConvertsPanicToError(t *testing.T) {
 	// Drive the same recover pattern Run uses: a panic mid-flight becomes a
 	// returned error rather than a nil success after recovery.
-	inner := errors.New("must-element failed")
 	err := func() (err error) {
 		defer func() {
 			if r := recover(); r != nil {
 				err = reportPanic(r)
 			}
 		}()
-		panic(inner)
+		panic(errMustElementFailed)
 	}()
 	if err == nil {
 		t.Fatal("expected panic to surface as error, got nil")
 	}
-	if !errors.Is(err, inner) {
+	if !errors.Is(err, errMustElementFailed) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }
