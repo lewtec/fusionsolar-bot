@@ -9,7 +9,7 @@ import (
 )
 
 func TestSleepContextStopsWhenContextIsCanceled(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	cancel()
 
 	start := time.Now()
@@ -49,18 +49,19 @@ func TestReportPanicWrapsNonErrorValue(t *testing.T) {
 func TestRunConvertsPanicToError(t *testing.T) {
 	// Drive the same recover pattern Run uses: a panic mid-flight becomes a
 	// returned error rather than a nil success after recovery.
+	inner := errors.New("must-element failed")
 	err := func() (err error) {
 		defer func() {
 			if r := recover(); r != nil {
 				err = reportPanic(r)
 			}
 		}()
-		panic(errors.New("must-element failed"))
+		panic(inner)
 	}()
 	if err == nil {
 		t.Fatal("expected panic to surface as error, got nil")
 	}
-	if !strings.Contains(err.Error(), "must-element failed") {
+	if !errors.Is(err, inner) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }
