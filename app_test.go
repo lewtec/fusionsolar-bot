@@ -65,6 +65,29 @@ func TestRunConvertsPanicToError(t *testing.T) {
 	}
 }
 
+func TestIsAgreeButtonText(t *testing.T) {
+	tests := []struct {
+		name string
+		in   string
+		want bool
+	}{
+		{name: "portuguese", in: "Concordar", want: true},
+		{name: "english", in: "Agree", want: true},
+		{name: "padded", in: "  concordar  ", want: true},
+		{name: "cancel", in: "Cancelar", want: false},
+		{name: "refuse", in: "Refuse", want: false},
+		{name: "empty", in: "", want: false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			if got := isAgreeButtonText(tt.in); got != tt.want {
+				t.Errorf("isAgreeButtonText(%q) = %v; want %v", tt.in, got, tt.want)
+			}
+		})
+	}
+}
+
 func TestSentryOptionsTagsReleaseAndDisablesTraces(t *testing.T) {
 	opts := sentryOptions("https://public@example.com/1", "0.8.0")
 	if opts.Dsn != "https://public@example.com/1" {

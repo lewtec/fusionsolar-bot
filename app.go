@@ -194,30 +194,8 @@ func (a *App) loginToFusionSolar(ctx context.Context, browser *rod.Browser) (*ro
 			return nil, err
 		}
 
-		// Handle cookie dialog
-		cookieButtons := page.MustElements("i.cookiePolicy-icon")
-		for _, button := range cookieButtons {
-			slog.Info("[*] Fechando diálogo de cookie")
-			button.MustClick()
-		}
-
-		// Handle privacy modal
-		modals := page.MustElements("div.nco-privacy-confirm-modal")
-		for _, modal := range modals {
-			if has, _, _ := modal.Has("div.nco-privacy-content"); !has {
-				continue
-			}
-
-			approveBtn, err := modal.Element("button.dpdesign-btn-primary")
-			if err == nil {
-				if err := sleepContext(ctx, 1*time.Second); err != nil {
-					return nil, err
-				}
-				approveBtn.MustClick()
-				if err := sleepContext(ctx, 10*time.Second); err != nil {
-					return nil, err
-				}
-			}
+		if err := a.dismissBlockingModals(ctx, page); err != nil {
+			return nil, err
 		}
 
 		// Check if logged in
@@ -228,6 +206,60 @@ func (a *App) loginToFusionSolar(ctx context.Context, browser *rod.Browser) (*ro
 		slog.Info("[*] Reiniciando processo de login")
 	}
 	return nil, fmt.Errorf("failed to login after %d attempts", a.MaxLoginRetries)
+}
+
+// dismissBlockingModals closes the cookie banner and the post-login
+// "Aviso de atualização" / privacy modal. Concordar is a default solid
+// button, not dpdesign-btn-primary; match by label. The dialog can appear
+// on #/home/list after login, not only on the login page.
+func (a *App) dismissBlockingModals(ctx context.Context, page *rod.Page) error {
+	for _, button := range page.MustElements("i.cookiePolicy-icon") {
+		slog.Info("[*] Fechando diálogo de cookie")
+		button.MustClick()
+	}
+
+	for _, sel := range []string{"div.nco-privacy-confirm-modal", ".privacy-confirm-popup"} {
+		for _, modal := range page.MustElements(sel) {
+			if err := acceptPrivacyModal(ctx, modal); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func acceptPrivacyModal(ctx context.Context, modal *rod.Element) error {
+	var agree *rod.Element
+	for _, btn := range modal.MustElements("div.ant-modal-footer button") {
+		if isAgreeButtonText(btn.MustText()) {
+			agree = btn
+			break
+		}
+	}
+	if agree == nil {
+		if btn, err := modal.Element("button.dpdesign-btn-primary"); err == nil {
+			agree = btn
+		}
+	}
+	if agree == nil {
+		return nil
+	}
+
+	slog.Info("[*] Aceitando aviso de atualização / privacidade")
+	if err := sleepContext(ctx, time.Second); err != nil {
+		return err
+	}
+	agree.MustClick()
+	return sleepContext(ctx, 3*time.Second)
+}
+
+func isAgreeButtonText(s string) bool {
+	switch strings.ToLower(strings.TrimSpace(s)) {
+	case "concordar", "agree", "aceptar", "aceitar", "同意":
+		return true
+	default:
+		return false
+	}
 }
 
 type StationData struct {
@@ -248,6 +280,9 @@ func (a *App) getStations(ctx context.Context, page *rod.Page) ([]StationData, e
 		slog.Info("[*] Acessando homepage")
 		page.MustNavigate("https://intl.fusionsolar.huawei.com")
 		if err := sleepContext(ctx, 10*time.Second); err != nil {
+			return nil, err
+		}
+		if err := a.dismissBlockingModals(ctx, page); err != nil {
 			return nil, err
 		}
 
@@ -296,6 +331,9 @@ func (a *App) collectStationData(ctx context.Context, page *rod.Page, stationsDa
 		slog.Info("[*] Coletando dados da estação", "station", station.Name)
 		page.MustNavigate(station.URL)
 		if err := sleepContext(ctx, 10*time.Second); err != nil {
+			return emailBody.String(), attachments, err
+		}
+		if err := a.dismissBlockingModals(ctx, page); err != nil {
 			return emailBody.String(), attachments, err
 		}
 
