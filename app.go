@@ -102,19 +102,19 @@ func (a *App) Run(ctx context.Context) (err error) {
 	// Login
 	page, err := a.loginToFusionSolar(ctx, browser)
 	if err != nil {
-		return fmt.Errorf("failed to login to FusionSolar: %w", err)
+		return fmt.Errorf("login to FusionSolar: %w", err)
 	}
 
 	// Get Stations
 	stationsData, err := a.getStations(ctx, page)
 	if err != nil {
-		return fmt.Errorf("failed to get stations: %w", err)
+		return fmt.Errorf("get stations: %w", err)
 	}
 
 	// Collect Data
 	emailBody, attachments, err := a.collectStationData(ctx, page, stationsData)
 	if err != nil {
-		return fmt.Errorf("failed to collect station data: %w", err)
+		return fmt.Errorf("collect station data: %w", err)
 	}
 
 	fmt.Println(emailBody)
@@ -127,7 +127,7 @@ func (a *App) Run(ctx context.Context) (err error) {
 		subject := fmt.Sprintf("Relatório do dia %s FusionSolar", time.Now().Format("2006-01-02"))
 
 		if err := a.sendEmail(subject, emailBody, attachments); err != nil {
-			return fmt.Errorf("failed to send email: %w", err)
+			return fmt.Errorf("send email: %w", err)
 		}
 	}
 	return nil
@@ -293,7 +293,7 @@ func (a *App) getStations(ctx context.Context, page *rod.Page) ([]StationData, e
 			slog.Info("[*] Zero estações encontradas", "attempt", attempts, "maxAttempts", maxAttempts)
 			slog.Info("[*] URL atual", "url", page.MustInfo().URL)
 			if attempts >= maxAttempts {
-				err := fmt.Errorf("failed to find stations after %d attempts", maxAttempts)
+				err := fmt.Errorf("find stations after %d attempts", maxAttempts)
 				// We don't exit here anymore, return empty or error
 				return nil, err
 			}
