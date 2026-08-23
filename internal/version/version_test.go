@@ -61,6 +61,18 @@ func TestResolvePseudoVersionUsesShortRevision(t *testing.T) {
 	}
 }
 
+func TestResolvePseudoVersionWithoutRevisionKeepsLabel(t *testing.T) {
+	got := resolve("dev", func() mainModule {
+		return mainModule{
+			Version: "v0.1.1-0.20260721222329-88501666e7f6",
+			OK:      true,
+		}
+	})
+	if got != "0.1.1-0.20260721222329-88501666e7f6" {
+		t.Fatalf("resolve() = %q, want stripped pseudo-version without revision", got)
+	}
+}
+
 func TestResolveDirtyRevisionFromModuleVersion(t *testing.T) {
 	// +dirty on the module version must survive into the display id; previously
 	// we collapsed to the same dev-<sha> as a clean tree.
@@ -160,6 +172,26 @@ func TestResolveModuleVersionBeatsRevision(t *testing.T) {
 	})
 	if got != "0.9.0" {
 		t.Fatalf("resolve() = %q, want module version over revision", got)
+	}
+}
+
+func TestModuleVersionLabel(t *testing.T) {
+	cases := []struct {
+		in   string
+		want string
+	}{
+		{"", ""},
+		{"  ", ""},
+		{"(devel)", ""},
+		{"v0.6.1", "0.6.1"},
+		{"0.6.1", "0.6.1"},
+		{"  v1.2.3\n", "1.2.3"},
+		{"v0.1.1-0.20260721222329-88501666e7f6", "0.1.1-0.20260721222329-88501666e7f6"},
+	}
+	for _, tc := range cases {
+		if got := moduleVersionLabel(tc.in); got != tc.want {
+			t.Fatalf("moduleVersionLabel(%q) = %q, want %q", tc.in, got, tc.want)
+		}
 	}
 }
 
