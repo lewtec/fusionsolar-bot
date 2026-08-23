@@ -1,6 +1,7 @@
 package version
 
 import (
+	"cmp"
 	"runtime/debug"
 	"strings"
 	"unicode"
@@ -125,33 +126,39 @@ func isAllDigits(s string) bool {
 	return true
 }
 
+// moduleVersionLabel returns the display form of a Go module version, or "".
+// Empty and "(devel)" are not labels. A leading v is stripped so go install
+// @vX.Y.Z matches unprefixed svu tags.
+func moduleVersionLabel(mv string) string {
+	mv = strings.TrimSpace(mv)
+	if mv == "" || mv == "(devel)" {
+		return ""
+	}
+	return strings.TrimPrefix(mv, "v")
+}
+
 // resolve picks a display version from ldflags injection and optional module metadata.
 func resolve(injected string, main func() mainModule) string {
-	if v := strings.TrimSpace(injected); v != "" && v != "dev" {
-		return v
+	injected = strings.TrimSpace(injected)
+	if injected != "" && injected != "dev" {
+		return injected
 	}
 	if main != nil {
-		m := main()
-		if m.OK {
-			mv := strings.TrimSpace(m.Version)
+		if m := main(); m.OK {
+			label := moduleVersionLabel(m.Version)
 			// Prefer a real release tag over VCS; skip (devel) and pseudo-versions.
-			if mv != "" && mv != "(devel)" && !isPseudoVersion(mv) {
-				// Repo tags are unprefixed (svu); strip a leading v so
-				// go install @vX.Y.Z and ldflags both surface X.Y.Z.
-				return strings.TrimPrefix(mv, "v")
+			if label != "" && !isPseudoVersion(m.Version) {
+				return label
 			}
 			if rev := shortRevision(m.Revision); rev != "" {
 				// Unique id for --version and Sentry Release when ldflags are unset.
 				return formatDevRevision(rev, m.isDirty())
 			}
 			// Pseudo-version without a separate revision stamp: keep stripped form.
-			if mv != "" && mv != "(devel)" {
-				return strings.TrimPrefix(mv, "v")
+			if label != "" {
+				return label
 			}
 		}
 	}
-	if v := strings.TrimSpace(injected); v != "" {
-		return v
-	}
-	return "dev"
+	return cmp.Or(injected, "dev")
 }
