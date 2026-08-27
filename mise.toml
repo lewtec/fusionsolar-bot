@@ -1,7 +1,7 @@
 [tools]
 go = "1.26.3"
 goreleaser = "2.17.0"
-svu = "3.3.0"
+svu = "3.4.1"
 "github:lucasew/workspaced" = "0.11.3"
 
 [tasks.install]
