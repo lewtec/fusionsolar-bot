@@ -97,5 +97,5 @@ runs:
         [[ -n "${INPUT_MAX_LOGIN_RETRIES}" ]] && docker_args+=(-e "MAX_LOGIN_RETRIES=${INPUT_MAX_LOGIN_RETRIES}")
         [[ -n "${INPUT_VERBOSE}" ]] && docker_args+=(-e "VERBOSE=${INPUT_VERBOSE}")
 
-        docker run -i "${docker_args[@]}" \
+        docker run --rm -i "${docker_args[@]}" \
           "ghcr.io/lewtec/fusionsolar-bot:${CONTAINER_REF}"
