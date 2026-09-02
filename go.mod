@@ -2,7 +2,7 @@ module github.com/lewtec/fusionsolar-bot
 
 go 1.25.0
 
-toolchain go1.26.3
+toolchain go1.27.1
 
 require (
 	github.com/getsentry/sentry-go v0.46.2
