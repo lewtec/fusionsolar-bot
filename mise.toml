@@ -1,5 +1,5 @@
 [tools]
-go = "1.26.3"
+go = "1.27.1"
 goreleaser = "2.17.0"
 svu = "3.3.0"
 "github:lucasew/workspaced" = "0.11.3"
