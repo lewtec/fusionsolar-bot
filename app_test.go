@@ -3,6 +3,8 @@ package fusionsolar
 import (
 	"context"
 	"errors"
+	"fmt"
+	"io"
 	"strings"
 	"testing"
 	"time"
@@ -38,6 +40,19 @@ func TestReportPanicWrapsErrorValue(t *testing.T) {
 	if !strings.HasPrefix(err.Error(), "panic: ") {
 		t.Fatalf("expected panic prefix, got %q", err.Error())
 	}
+	if !alreadyReported(err) {
+		t.Fatal("expected recovered panic to be marked already reported")
+	}
+}
+
+func TestAlreadyReportedSurvivesWrap(t *testing.T) {
+	err := fmt.Errorf("get stations: %w", reportPanic(io.EOF))
+	if !alreadyReported(err) {
+		t.Fatal("expected wrapped panic to stay marked already reported")
+	}
+	if !errors.Is(err, io.EOF) {
+		t.Fatalf("expected wrapped EOF, got %v", err)
+	}
 }
 
 func TestReportPanicWrapsNonErrorValue(t *testing.T) {
@@ -66,6 +81,20 @@ func TestRunConvertsPanicToError(t *testing.T) {
 	}
 	if !errors.Is(err, errMustElementFailed) {
 		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestStopBrowserRetry(t *testing.T) {
+	ctx, cancel := context.WithCancel(t.Context())
+	if stopBrowserRetry(ctx, io.EOF) {
+		t.Fatal("EOF should stay retryable while the run is active")
+	}
+	cancel()
+	if !stopBrowserRetry(ctx, io.EOF) {
+		t.Fatal("a finished run should stop retries")
+	}
+	if !stopBrowserRetry(t.Context(), errElementNotFound) {
+		t.Fatal("non-transient errors should stop retries")
 	}
 }
 

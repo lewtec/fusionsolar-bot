@@ -14,6 +14,7 @@ import (
 	"github.com/getsentry/sentry-go"
 	"github.com/go-rod/rod"
 	"github.com/go-rod/rod/lib/input"
+	"github.com/go-rod/rod/lib/proto"
 	"gopkg.in/gomail.v2"
 
 	appversion "github.com/lewtec/fusionsolar-bot/internal/version"
@@ -46,21 +47,25 @@ func sleepContext(ctx context.Context, d time.Duration) error {
 }
 
 // reportPanic sends a recovered panic value to Sentry and returns it as an error
-// so callers do not treat Must* (or other) panics as a successful Run.
+// so callers do not treat unexpected panics as a successful Run.
+// The result is marked already reported so the CLI does not capture it again.
 func reportPanic(r any) error {
 	sentry.CurrentHub().Recover(r)
-	if err, ok := r.(error); ok {
-		return fmt.Errorf("panic: %w", err)
+	var err error
+	if panicErr, ok := r.(error); ok {
+		err = fmt.Errorf("panic: %w", panicErr)
+	} else {
+		err = fmt.Errorf("panic: %v", r)
 	}
-	return fmt.Errorf("panic: %v", r)
+	return alreadyReportedError{err}
 }
 
 func (a *App) Run(ctx context.Context) (err error) {
 	// Setup Sentry
 	a.setupSentry()
 	defer sentry.Flush(2 * time.Second)
-	// Must* rod helpers panic on failure. Convert panics into a non-nil error so
-	// the CLI exits non-zero instead of looking successful after sentry.Recover().
+	// Browser helpers return errors. This only covers an unexpected panic so the
+	// CLI still exits non-zero instead of looking successful after recovery.
 	defer func() {
 		if r := recover(); r != nil {
 			err = reportPanic(r)
@@ -158,7 +163,10 @@ func (a *App) setupSentry() {
 
 func (a *App) setupBrowser(ctx context.Context) (*rod.Browser, error) {
 	if a.BrowserCDP == "" {
-		return nil, fmt.Errorf("[!] BROWSER_CDP não fornecido")
+		return nil, fmt.Errorf("[!] BROWSER_CDP não fornecido (defina BROWSER_CDP ou --browser-cdp)")
+	}
+	if err := ctx.Err(); err != nil {
+		return nil, fmt.Errorf("setup browser: %w", err)
 	}
 
 	browser := rod.New().Context(ctx).ControlURL(a.BrowserCDP)
@@ -167,7 +175,10 @@ func (a *App) setupBrowser(ctx context.Context) (*rod.Browser, error) {
 		browser = browser.Trace(true)
 	}
 
-	return browser, browser.Connect()
+	if err := browser.Connect(); err != nil {
+		return nil, fmt.Errorf("BROWSER_CDP inacessível: %w", err)
+	}
+	return browser, nil
 }
 
 // loginToFusionSolar navigates to the FusionSolar login page, enters credentials,
@@ -176,36 +187,107 @@ func (a *App) setupBrowser(ctx context.Context) (*rod.Browser, error) {
 // network instability or slow SPA rendering. It yields a logged-in rod.Page or an
 // error if all retries are exhausted.
 func (a *App) loginToFusionSolar(ctx context.Context, browser *rod.Browser) (*rod.Page, error) {
+	const loginURL = "https://intl.fusionsolar.huawei.com/pvmswebsite/login/build/index.html#/LOGIN"
+	var lastErr error
 	for i := 0; i < a.MaxLoginRetries; i++ {
+		if err := ctx.Err(); err != nil {
+			return nil, fmt.Errorf("login: %w", err)
+		}
 		slog.Info("[*] Login attempt", "attempt", i+1, "maxRetries", a.MaxLoginRetries)
-		page := browser.MustPage("https://intl.fusionsolar.huawei.com/pvmswebsite/login/build/index.html#/LOGIN")
+		page, err := browser.Page(proto.TargetCreateTarget{URL: loginURL})
+		if err != nil {
+			lastErr = err
+			slog.Info("[*] Falha ao abrir página de login", "attempt", i+1, "error", err)
+			if !isRetryableBrowserErr(err) {
+				return nil, fmt.Errorf("open login page: %w", err)
+			}
+			continue
+		}
 
-		page.MustWaitLoad()
+		if err := waitPageLoad(ctx, page); err != nil {
+			lastErr = err
+			if stopBrowserRetry(ctx, err) {
+				return nil, fmt.Errorf("wait login page: %w", err)
+			}
+			continue
+		}
 		if err := sleepContext(ctx, 5*time.Second); err != nil {
 			return nil, err
 		}
 
-		page.MustElement("div#username input").MustInput(a.User)
-		passwordInput := page.MustElement("div#password input")
-		passwordInput.MustInput(a.Password)
-		passwordInput.MustType(input.Enter)
+		userEl, err := waitElement(ctx, page, "div#username input")
+		if err != nil {
+			lastErr = err
+			if stopBrowserRetry(ctx, err) {
+				return nil, fmt.Errorf("login username field: %w", err)
+			}
+			continue
+		}
+		if err := inputText(ctx, userEl, a.User); err != nil {
+			lastErr = err
+			if stopBrowserRetry(ctx, err) {
+				return nil, fmt.Errorf("fill username: %w", err)
+			}
+			continue
+		}
+		passwordInput, err := waitElement(ctx, page, "div#password input")
+		if err != nil {
+			lastErr = err
+			if stopBrowserRetry(ctx, err) {
+				return nil, fmt.Errorf("login password field: %w", err)
+			}
+			continue
+		}
+		if err := inputText(ctx, passwordInput, a.Password); err != nil {
+			lastErr = err
+			if stopBrowserRetry(ctx, err) {
+				return nil, fmt.Errorf("fill password: %w", err)
+			}
+			continue
+		}
+		if err := pressKey(ctx, passwordInput, input.Enter); err != nil {
+			lastErr = err
+			if stopBrowserRetry(ctx, err) {
+				return nil, fmt.Errorf("submit login: %w", err)
+			}
+			continue
+		}
 
 		if err := sleepContext(ctx, 10*time.Second); err != nil {
 			return nil, err
 		}
 
 		if err := a.dismissBlockingModals(ctx, page); err != nil {
-			return nil, err
+			lastErr = err
+			if stopBrowserRetry(ctx, err) {
+				return nil, fmt.Errorf("dismiss blocking modals: %w", err)
+			}
+			continue
 		}
 
-		// Check if logged in
-		url := page.MustInfo().URL
+		url, err := pageURL(ctx, page)
+		if err != nil {
+			lastErr = err
+			if stopBrowserRetry(ctx, err) {
+				return nil, fmt.Errorf("read page url: %w", err)
+			}
+			continue
+		}
 		if !strings.Contains(url, "login") {
 			return page, nil
 		}
 		slog.Info("[*] Reiniciando processo de login")
 	}
+	if lastErr != nil {
+		return nil, fmt.Errorf("failed to login after %d attempts: %w", a.MaxLoginRetries, lastErr)
+	}
 	return nil, fmt.Errorf("failed to login after %d attempts", a.MaxLoginRetries)
+}
+
+// stopBrowserRetry reports whether another attempt would hide a finished run
+// or a non-transient browser failure.
+func stopBrowserRetry(ctx context.Context, err error) bool {
+	return ctx.Err() != nil || !isRetryableBrowserErr(err)
 }
 
 // dismissBlockingModals closes the cookie banner and the post-login
@@ -213,13 +295,23 @@ func (a *App) loginToFusionSolar(ctx context.Context, browser *rod.Browser) (*ro
 // button, not dpdesign-btn-primary; match by label. The dialog can appear
 // on #/home/list after login, not only on the login page.
 func (a *App) dismissBlockingModals(ctx context.Context, page *rod.Page) error {
-	for _, button := range page.MustElements("i.cookiePolicy-icon") {
+	cookies, err := pageElements(ctx, page, "i.cookiePolicy-icon")
+	if err != nil {
+		return err
+	}
+	for _, button := range cookies {
 		slog.Info("[*] Fechando diálogo de cookie")
-		button.MustClick()
+		if err := elementClick(ctx, button); err != nil {
+			return err
+		}
 	}
 
 	for _, sel := range []string{"div.nco-privacy-confirm-modal", ".privacy-confirm-popup"} {
-		for _, modal := range page.MustElements(sel) {
+		modals, err := pageElements(ctx, page, sel)
+		if err != nil {
+			return err
+		}
+		for _, modal := range modals {
 			if err := acceptPrivacyModal(ctx, modal); err != nil {
 				return err
 			}
@@ -229,16 +321,29 @@ func (a *App) dismissBlockingModals(ctx context.Context, page *rod.Page) error {
 }
 
 func acceptPrivacyModal(ctx context.Context, modal *rod.Element) error {
+	buttons, err := elementElements(ctx, modal, "div.ant-modal-footer button")
+	if err != nil {
+		return err
+	}
 	var agree *rod.Element
-	for _, btn := range modal.MustElements("div.ant-modal-footer button") {
-		if isAgreeButtonText(btn.MustText()) {
+	for _, btn := range buttons {
+		text, err := elementText(ctx, btn)
+		if err != nil {
+			return err
+		}
+		if isAgreeButtonText(text) {
 			agree = btn
 			break
 		}
 	}
 	if agree == nil {
-		if btn, err := modal.Element("button.dpdesign-btn-primary"); err == nil {
-			agree = btn
+		// Optional button: Elements returns immediately when it is absent.
+		fallbacks, err := elementElements(ctx, modal, "button.dpdesign-btn-primary")
+		if err != nil {
+			return err
+		}
+		if len(fallbacks) > 0 {
+			agree = fallbacks[0]
 		}
 	}
 	if agree == nil {
@@ -249,7 +354,9 @@ func acceptPrivacyModal(ctx context.Context, modal *rod.Element) error {
 	if err := sleepContext(ctx, time.Second); err != nil {
 		return err
 	}
-	agree.MustClick()
+	if err := elementClick(ctx, agree); err != nil {
+		return err
+	}
 	return sleepContext(ctx, 3*time.Second)
 }
 
@@ -272,45 +379,93 @@ type StationData struct {
 // mechanism (up to 5 attempts) to account for the page's SPA architecture,
 // which may delay rendering the stations list.
 func (a *App) getStations(ctx context.Context, page *rod.Page) ([]StationData, error) {
-	maxAttempts := 5
-	attempts := 0
+	const maxAttempts = 5
+	const homeURL = "https://intl.fusionsolar.huawei.com"
 	var stationsData []StationData
+	var lastErr error
 
-	for len(stationsData) == 0 && attempts < maxAttempts {
+	for attempt := 1; attempt <= maxAttempts && len(stationsData) == 0; attempt++ {
+		if err := ctx.Err(); err != nil {
+			return nil, fmt.Errorf("list stations: %w", err)
+		}
 		slog.Info("[*] Acessando homepage")
-		page.MustNavigate("https://intl.fusionsolar.huawei.com")
+		if err := navigatePage(ctx, page, homeURL); err != nil {
+			lastErr = err
+			slog.Info("[*] Falha ao abrir homepage", "attempt", attempt, "maxAttempts", maxAttempts, "error", err)
+			if stopBrowserRetry(ctx, err) {
+				return nil, fmt.Errorf("open homepage: %w", err)
+			}
+			continue
+		}
 		if err := sleepContext(ctx, 10*time.Second); err != nil {
 			return nil, err
 		}
 		if err := a.dismissBlockingModals(ctx, page); err != nil {
-			return nil, err
+			lastErr = err
+			slog.Info("[*] Falha ao fechar modais", "attempt", attempt, "maxAttempts", maxAttempts, "error", err)
+			if stopBrowserRetry(ctx, err) {
+				return nil, fmt.Errorf("dismiss blocking modals: %w", err)
+			}
+			continue
 		}
 
 		slog.Info("[*] Tentando listar estações")
-		stations, err := page.Elements("a.nco-home-list-text-ellipsis")
-		if err != nil || len(stations) == 0 {
-			attempts++
-			slog.Info("[*] Zero estações encontradas", "attempt", attempts, "maxAttempts", maxAttempts)
-			slog.Info("[*] URL atual", "url", page.MustInfo().URL)
-			if attempts >= maxAttempts {
-				err := fmt.Errorf("find stations after %d attempts", maxAttempts)
-				// We don't exit here anymore, return empty or error
-				return nil, err
+		stations, err := pageElements(ctx, page, "a.nco-home-list-text-ellipsis")
+		if err != nil {
+			lastErr = err
+			slog.Info("[*] Falha ao listar estações", "attempt", attempt, "maxAttempts", maxAttempts, "error", err)
+			if stopBrowserRetry(ctx, err) {
+				return nil, fmt.Errorf("list stations: %w", err)
 			}
-		} else {
-			for _, station := range stations {
-				href := station.MustProperty("href").String()
-				name := station.MustText()
-				sData := StationData{
-					URL:  href,
-					Name: name,
+			continue
+		}
+		if len(stations) == 0 {
+			slog.Info("[*] Zero estações encontradas", "attempt", attempt, "maxAttempts", maxAttempts)
+			if url, urlErr := pageURL(ctx, page); urlErr != nil {
+				if ctx.Err() != nil {
+					return nil, fmt.Errorf("list stations: %w", ctx.Err())
 				}
-				slog.Info("[*] Estação encontrada", "name", sData.Name, "url", sData.URL)
-				stationsData = append(stationsData, sData)
+				slog.Info("[*] URL atual indisponível", "error", urlErr)
+			} else {
+				slog.Info("[*] URL atual", "url", url)
+			}
+			continue
+		}
+
+		readErr := readStationLinks(ctx, stations, &stationsData)
+		if readErr != nil {
+			stationsData = nil
+			lastErr = readErr
+			slog.Info("[*] Falha ao ler estações", "attempt", attempt, "maxAttempts", maxAttempts, "error", readErr)
+			if stopBrowserRetry(ctx, readErr) {
+				return nil, fmt.Errorf("read station: %w", readErr)
 			}
 		}
 	}
+	if len(stationsData) == 0 {
+		if lastErr != nil {
+			return nil, fmt.Errorf("find stations after %d attempts: %w", maxAttempts, lastErr)
+		}
+		return nil, fmt.Errorf("find stations after %d attempts", maxAttempts)
+	}
 	return stationsData, nil
+}
+
+func readStationLinks(ctx context.Context, stations rod.Elements, dest *[]StationData) error {
+	for _, station := range stations {
+		href, err := elementProperty(ctx, station, "href")
+		if err != nil {
+			return err
+		}
+		name, err := elementText(ctx, station)
+		if err != nil {
+			return err
+		}
+		sData := StationData{URL: href, Name: name}
+		slog.Info("[*] Estação encontrada", "name", sData.Name, "url", sData.URL)
+		*dest = append(*dest, sData)
+	}
+	return nil
 }
 
 type Attachment struct {
@@ -329,7 +484,9 @@ func (a *App) collectStationData(ctx context.Context, page *rod.Page, stationsDa
 
 	for _, station := range stationsData {
 		slog.Info("[*] Coletando dados da estação", "station", station.Name)
-		page.MustNavigate(station.URL)
+		if err := navigatePage(ctx, page, station.URL); err != nil {
+			return emailBody.String(), attachments, fmt.Errorf("open station: %w", err)
+		}
 		if err := sleepContext(ctx, 10*time.Second); err != nil {
 			return emailBody.String(), attachments, err
 		}
@@ -337,14 +494,14 @@ func (a *App) collectStationData(ctx context.Context, page *rod.Page, stationsDa
 			return emailBody.String(), attachments, err
 		}
 
-		// Get canvas chart
-		canvas := page.MustElement(".nco-single-energy-body canvas")
-		res, err := canvas.Eval(`function() { return this.toDataURL('image/png') }`)
+		canvas, err := waitElement(ctx, page, ".nco-single-energy-body canvas")
 		if err != nil {
-			ReportError("Error getting canvas data", err)
-			continue
+			return emailBody.String(), attachments, fmt.Errorf("station canvas: %w", err)
 		}
-		dataURL := res.Value.Str()
+		dataURL, err := readCanvasDataURL(ctx, canvas)
+		if err != nil {
+			return emailBody.String(), attachments, fmt.Errorf("read canvas: %w", err)
+		}
 		b64 := strings.TrimPrefix(dataURL, "data:image/png;base64,")
 
 		imgBytes, err := base64.StdEncoding.DecodeString(b64)
@@ -357,9 +514,14 @@ func (a *App) collectStationData(ctx context.Context, page *rod.Page, stationsDa
 			Content: imgBytes,
 		})
 
-		// Get production amount
-		valEl := page.MustElement("span.value")
-		valText := valEl.MustText()
+		valEl, err := waitElement(ctx, page, "span.value")
+		if err != nil {
+			return emailBody.String(), attachments, fmt.Errorf("read production amount: %w", err)
+		}
+		valText, err := elementText(ctx, valEl)
+		if err != nil {
+			return emailBody.String(), attachments, fmt.Errorf("read production amount: %w", err)
+		}
 		valText = strings.ReplaceAll(valText, ",", ".")
 		amountProduced, err := strconv.ParseFloat(valText, 64)
 		if err != nil {
