@@ -118,6 +118,7 @@ func (a *App) Run(ctx context.Context) (err error) {
 	}
 
 	fmt.Println(emailBody)
+	dumpLocal(fmt.Sprintf("Relatório do dia %s FusionSolar", time.Now().Format("2006-01-02")), emailBody, attachments)
 
 	if emailEnabled {
 		if a.SmtpFrom == "" {
@@ -276,9 +277,14 @@ func (a *App) getStations(ctx context.Context, page *rod.Page) ([]StationData, e
 	attempts := 0
 	var stationsData []StationData
 
+	_ = sleepContext(ctx, 15*time.Second)
+	_ = a.dismissBlockingModals(ctx, page)
+	if singleStationFallback(page, &stationsData) {
+		return stationsData, nil
+	}
 	for len(stationsData) == 0 && attempts < maxAttempts {
 		slog.Info("[*] Acessando homepage")
-		page.MustNavigate("https://intl.fusionsolar.huawei.com")
+		_ = page.Timeout(60 * time.Second).Navigate("https://intl.fusionsolar.huawei.com")
 		if err := sleepContext(ctx, 10*time.Second); err != nil {
 			return nil, err
 		}
@@ -288,6 +294,9 @@ func (a *App) getStations(ctx context.Context, page *rod.Page) ([]StationData, e
 
 		slog.Info("[*] Tentando listar estações")
 		stations, err := page.Elements("a.nco-home-list-text-ellipsis")
+		if (err != nil || len(stations) == 0) && singleStationFallback(page, &stationsData) {
+			break
+		}
 		if err != nil || len(stations) == 0 {
 			attempts++
 			slog.Info("[*] Zero estações encontradas", "attempt", attempts, "maxAttempts", maxAttempts)
@@ -329,7 +338,9 @@ func (a *App) collectStationData(ctx context.Context, page *rod.Page, stationsDa
 
 	for _, station := range stationsData {
 		slog.Info("[*] Coletando dados da estação", "station", station.Name)
-		page.MustNavigate(station.URL)
+		if page.MustInfo().URL != station.URL {
+			_ = page.Timeout(60 * time.Second).Navigate(station.URL)
+		}
 		if err := sleepContext(ctx, 10*time.Second); err != nil {
 			return emailBody.String(), attachments, err
 		}
