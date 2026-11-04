@@ -93,8 +93,9 @@ func shortRevision(rev string) string {
 // (timestamp + commit) rather than a release tag. Avoids depending on
 // golang.org/x/mod just for this check.
 func isPseudoVersion(v string) bool {
-	v = strings.TrimPrefix(strings.TrimSpace(v), "v")
-	if v == "" || v == "(devel)" {
+	// Same empty/(devel)/v-prefix rules as the display label.
+	v = moduleVersionLabel(v)
+	if v == "" {
 		return false
 	}
 	if hasDirtyMarker(v) {
