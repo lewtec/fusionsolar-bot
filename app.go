@@ -14,6 +14,7 @@ import (
 	"github.com/getsentry/sentry-go"
 	"github.com/go-rod/rod"
 	"github.com/go-rod/rod/lib/input"
+	"github.com/go-rod/rod/lib/proto"
 	"gopkg.in/gomail.v2"
 
 	appversion "github.com/lewtec/fusionsolar-bot/internal/version"
@@ -284,7 +285,10 @@ func (a *App) getStations(ctx context.Context, page *rod.Page) ([]StationData, e
 	}
 	for len(stationsData) == 0 && attempts < maxAttempts {
 		slog.Info("[*] Acessando homepage")
-		_ = page.Timeout(60 * time.Second).Navigate("https://intl.fusionsolar.huawei.com")
+		// PageNavigate does not wait for the load event. The FusionSolar SPA
+		// keeps long-lived requests open, so Navigate can block until the
+		// overall timeout even though the page is already usable.
+		_, _ = proto.PageNavigate{URL: "https://intl.fusionsolar.huawei.com"}.Call(page.Timeout(60 * time.Second))
 		if err := sleepContext(ctx, 10*time.Second); err != nil {
 			return nil, err
 		}
@@ -339,7 +343,7 @@ func (a *App) collectStationData(ctx context.Context, page *rod.Page, stationsDa
 	for _, station := range stationsData {
 		slog.Info("[*] Coletando dados da estação", "station", station.Name)
 		if page.MustInfo().URL != station.URL {
-			_ = page.Timeout(60 * time.Second).Navigate(station.URL)
+			_, _ = proto.PageNavigate{URL: station.URL}.Call(page.Timeout(60 * time.Second))
 		}
 		if err := sleepContext(ctx, 10*time.Second); err != nil {
 			return emailBody.String(), attachments, err
