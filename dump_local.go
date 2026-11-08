@@ -30,7 +30,17 @@ func singleStationFallback(page *rod.Page, out *[]StationData) bool {
 	}
 	name := os.Getenv("STATION_NAME")
 	if name == "" {
-		r, _ := page.Eval(`() => { for (const s of [".nco-station-name",".station-name","[class*=stationName]","[class*=station-name]"]) { const e=document.querySelector(s); if (e && e.innerText.trim()) return e.innerText.trim(); } return ""; }`)
+		// The single-station overview may not expose a station-name element at
+		// all; in that case the plant name is only in the left tree node title.
+		r, _ := page.Eval(`() => {
+			for (const s of [".nco-station-name", ".station-name", "[class*=stationName]", "[class*=station-name]"]) {
+				const e = document.querySelector(s);
+				if (e && e.innerText.trim()) return e.innerText.trim();
+			}
+			const node = document.querySelector('[id^="monitor-layout-node-"][title]');
+			if (node) return node.getAttribute("title").trim();
+			return "";
+		}`)
 		if r != nil {
 			name = r.Value.Str()
 		}
